@@ -1,0 +1,18 @@
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: step
+        run: |
+          go version
+
+name: workflow
+
+'on':
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  schedule:
+    # generated randomly
+    - cron: '42 22 * * * FRI'
