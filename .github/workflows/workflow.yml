@@ -15,4 +15,4 @@ name: workflow
     branches: [master]
   schedule:
     # generated randomly
-    - cron: '42 22 * * * FRI'
+    - cron: '42 22 * * FRI'
