@@ -1,7 +1,7 @@
 package textproc_test
 
 import (
-	"github.com/MihaiB/mihaib/os/sys/programs/toolbox/go/textproc"
+	"github.com/MihaiB/textproc"
 	"io"
 	"strings"
 	"testing"

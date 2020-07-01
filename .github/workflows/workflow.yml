@@ -6,6 +6,9 @@ jobs:
       - name: step
         run: |
           ! gofmt -l -s . | grep -q ''
+          go vet ./...
+          go test ./...
+          go install ./...
 
 name: workflow
 

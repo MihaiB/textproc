@@ -5,7 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/MihaiB/mihaib/os/sys/programs/toolbox/go/textproc"
+	"github.com/MihaiB/textproc"
 	"io"
 	"os"
 	"sort"

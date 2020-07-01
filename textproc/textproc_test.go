@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/MihaiB/mihaib/os/sys/programs/toolbox/go/textproc"
+	"github.com/MihaiB/textproc"
 	"io"
 	"strings"
 	"testing"
