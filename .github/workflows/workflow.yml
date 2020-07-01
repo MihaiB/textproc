@@ -5,7 +5,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: step
         run: |
-          go version
+          ! gofmt -l -s . | grep -q ''
 
 name: workflow
 
