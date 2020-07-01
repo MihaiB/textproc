@@ -1,3 +1,11 @@
-Process text (LF end-of-line, trailing space, sort paragraphs).
+Text processing
+
+For example LF end-of-line, remove trailing white space, sort paragraphs.
 
 Go library and command.
+
+https://pkg.go.dev/github.com/MihaiB/textproc
+
+cd # go outside a module
+go get -u github.com/MihaiB/textproc/textproc
+`go env GOPATH`/bin/textproc -help
