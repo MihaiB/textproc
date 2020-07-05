@@ -4,11 +4,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: step
-        run: |
-          ! gofmt -l -s . | grep -q ''
-          go vet ./...
-          go test ./...
-          go install ./...
+        run: .github/workflows/workflow.sh
 
 name: workflow
 
