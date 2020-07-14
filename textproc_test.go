@@ -232,3 +232,29 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 		checkReader(t, r, want.runes, want.err)
 	}
 }
+
+func TestReadAllTokens(t *testing.T) {
+	for s, want := range map[string]struct {
+		tokens [][]rune
+		err    error
+	}{
+		"":        {nil, io.EOF},
+		"»\n[}\n": {[][]rune{{'»'}, {'[', '}'}}, io.EOF},
+	} {
+		lineContentR := textproc.LFLineContent(textproc.NewReader(strings.NewReader(s)))
+		gotTokens, gotErr := textproc.ReadAllTokens(lineContentR)
+		if gotErr != want.err {
+			t.Fatal("want", want.err, "got", gotErr)
+		}
+		if len(gotTokens) != len(want.tokens) {
+			t.Fatal("want", len(want.tokens), "tokens, got",
+				len(gotTokens))
+		}
+		for i, gotToken := range gotTokens {
+			wantToken := want.tokens[i]
+			if string(gotToken) != string(wantToken) {
+				t.Fatal("want", wantToken, "got", gotToken)
+			}
+		}
+	}
+}

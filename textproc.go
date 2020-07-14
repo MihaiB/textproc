@@ -459,3 +459,16 @@ func (r *trimTrailingEmptyLFLines) Read() (rune, error) {
 func TrimTrailingEmptyLFLines(r Reader) Reader {
 	return &trimTrailingEmptyLFLines{r: r}
 }
+
+// ReadAllTokens reads tokens from r until it encounters an error
+// and returns the tokens from all but the last call
+// and the error from the last call.
+func ReadAllTokens(r TokenReader) (tokens [][]rune, err error) {
+	for {
+		var token []rune
+		if token, err = r.ReadToken(); err != nil {
+			return
+		}
+		tokens = append(tokens, token)
+	}
+}
