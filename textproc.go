@@ -216,47 +216,20 @@ type sortLfParagraphsI struct {
 	err       error
 }
 
-func (r *sortLfParagraphsI) readParContents() ([][]rune, error) {
-	parContentReader := LFParagraphContent(r.r)
-	r.r = nil
-	var parContents [][]rune
-	for {
-		content, err := parContentReader.ReadToken()
-		if err != nil {
-			return parContents, err
-		}
-		parContents = append(parContents, content)
-	}
-}
-
 func (r *sortLfParagraphsI) process() {
 	var parContents [][]rune
-	parContents, r.err = r.readParContents()
-
-	type sortItem struct {
-		text    []rune
-		sortKey string
-	}
-	sortItems := make([]*sortItem, len(parContents))
-	for i, parContent := range parContents {
-		lower := make([]rune, len(parContent))
-		for i := range lower {
-			lower[i] = unicode.ToLower(parContent[i])
-		}
-		sortItems[i] = &sortItem{parContent, string(lower)}
-	}
-	sort.SliceStable(sortItems, func(i, j int) bool {
-		return sortItems[i].sortKey < sortItems[j].sortKey
-	})
+	parContents, r.err = ReadAllTokens(LFParagraphContent(r.r))
+	r.r = nil
+	sortTokensI(parContents)
 
 	parSep := []rune{'\n', '\n'}
-	result := make([][]rune, 2*len(sortItems))
-	for i, item := range sortItems {
-		result[2*i] = item.text
+	result := make([][]rune, 2*len(parContents))
+	for i, parContent := range parContents {
+		result[2*i] = parContent
 		result[2*i+1] = parSep
 	}
-	if len(sortItems) > 0 {
-		result[2*len(sortItems)-1] = []rune{'\n'}
+	if len(parContents) > 0 {
+		result[2*len(parContents)-1] = []rune{'\n'}
 		// only set r.result to a non-nil value if its length is > 0
 		r.result = result
 	}
@@ -470,5 +443,31 @@ func ReadAllTokens(r TokenReader) (tokens [][]rune, err error) {
 			return
 		}
 		tokens = append(tokens, token)
+	}
+}
+
+type tokenLowercaseT struct {
+	token     []rune
+	lowercase string
+}
+
+func getTokenLowercaseT(token []rune) *tokenLowercaseT {
+	lowerRunes := make([]rune, len(token))
+	for i := range token {
+		lowerRunes[i] = unicode.ToLower(token[i])
+	}
+	return &tokenLowercaseT{token, string(lowerRunes)}
+}
+
+func sortTokensI(tokens [][]rune) {
+	lowercaseTokens := make([]*tokenLowercaseT, len(tokens))
+	for i := range tokens {
+		lowercaseTokens[i] = getTokenLowercaseT(tokens[i])
+	}
+	sort.SliceStable(lowercaseTokens, func(i, j int) bool {
+		return lowercaseTokens[i].lowercase < lowercaseTokens[j].lowercase
+	})
+	for i := range lowercaseTokens {
+		tokens[i] = lowercaseTokens[i].token
 	}
 }
