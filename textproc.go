@@ -311,7 +311,7 @@ func (r *trimLfTrailingSpace) Read() (rune, error) {
 		return 0, r.err
 	}
 
-	if r.next != nil {
+	if len(r.next) > 0 {
 		val := r.next[0]
 		r.next = r.next[1:]
 		if len(r.next) == 0 {
@@ -335,7 +335,7 @@ func (r *trimLfTrailingSpace) Read() (rune, error) {
 			continue
 		}
 
-		if pending == nil {
+		if len(pending) == 0 {
 			return val, nil
 		}
 		r.next = append(pending, val)
