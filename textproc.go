@@ -425,7 +425,7 @@ func (r *trimTrailingEmptyLFLines) Read() (rune, error) {
 		return 0, r.err
 	}
 
-	if r.next != nil {
+	if len(r.next) > 0 {
 		val := r.next[0]
 		r.next = r.next[1:]
 		if len(r.next) == 0 {
