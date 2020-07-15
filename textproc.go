@@ -150,7 +150,10 @@ func (r *lfLineContent) ReadToken() ([]rune, error) {
 		ch, r.err = r.r.Read()
 		if r.err != nil {
 			r.r = nil
-			if len(token) > 0 {
+			// Discard the partial line on error.
+			// Otherwise the caller can't distinguish it
+			// from a complete line ending in '\n' or EOF.
+			if r.err == io.EOF && len(token) > 0 {
 				return token, nil
 			}
 			return r.ReadToken()
@@ -184,7 +187,9 @@ func (r *lfParagraphContent) ReadToken() ([]rune, error) {
 		line, r.err = r.r.ReadToken()
 		if r.err != nil {
 			r.r = nil
-			if len(par) > 0 {
+			// Discard the partial paragraph on error.
+			// Otherwise the caller can't tell it is incomplete.
+			if r.err == io.EOF && len(par) > 0 {
 				return par, nil
 			}
 			return r.ReadToken()

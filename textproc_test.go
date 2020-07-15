@@ -107,10 +107,11 @@ func TestLFLineContent(t *testing.T) {
 		tokens [][]rune
 		err    error
 	}{
-		"":         {nil, io.EOF},
-		"α":        {[][]rune{[]rune("α")}, io.EOF},
-		"\r\nβè\n": {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
-		"\n\nz":    {[][]rune{nil, nil, []rune("z")}, io.EOF},
+		"":          {nil, io.EOF},
+		"α":         {[][]rune{[]rune("α")}, io.EOF},
+		"\r\nβè\n":  {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
+		"\n\nz":     {[][]rune{nil, nil, []rune("z")}, io.EOF},
+		"ζ\nξ\xffa": {[][]rune{{'ζ'}}, textproc.ErrInvalidUTF8},
 	} {
 		textprocReader := textproc.NewReader(strings.NewReader(s))
 		r := textproc.LFLineContent(textprocReader)
@@ -127,7 +128,8 @@ func TestLFParagraphContent(t *testing.T) {
 		"a\r\nb\n \nc\n\nd": {[][]rune{
 			[]rune("a\r\nb\n \nc"),
 			[]rune("d")}, io.EOF},
-		"\n\nδσ\n\n\n": {[][]rune{[]rune("δσ")}, io.EOF},
+		"\n\nδσ\n\n\n":  {[][]rune{[]rune("δσ")}, io.EOF},
+		"ø\n\nb\nc\xff": {[][]rune{[]rune("ø")}, textproc.ErrInvalidUTF8},
 	} {
 		textprocReader := textproc.NewReader(strings.NewReader(s))
 		r := textproc.LFParagraphContent(textprocReader)
@@ -145,7 +147,7 @@ func TestSortLFParagraphsI(t *testing.T) {
 		"Par1":   {[]rune("Par1\n"), io.EOF},
 		"Hi\n👽\n\nalien\n\n\nspace": {
 			[]rune("alien\n\nHi\n👽\n\nspace\n"), io.EOF},
-		"NEON\n\nargon\n\nradon\nxenon\xffa": {
+		"NEON\n\nargon\n\nradon\nxenon\n\nHg\nHe\xffa": {
 			[]rune("argon\n\nNEON\n\nradon\nxenon\n"),
 			textproc.ErrInvalidUTF8},
 	} {
