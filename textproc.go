@@ -504,3 +504,18 @@ func sortTokensI(tokens [][]rune) {
 		tokens[i] = lowercaseTokens[i].token
 	}
 }
+
+// SortLFLinesI returns a new Reader which reads
+// the content of all lines from r using LFLineContent,
+// sorts them in case-insensitive order and appends "\n" after each.
+func SortLFLinesI(r Reader) Reader {
+	lines, err := ReadAllTokens(LFLineContent(r))
+	sortTokensI(lines)
+	tokens := make([][]rune, 2*len(lines))
+	lineTerm := []rune{'\n'}
+	for i := range lines {
+		tokens[2*i] = lines[i]
+		tokens[2*i+1] = lineTerm
+	}
+	return NewReaderFromTokenReader(NewTokenReaderFromTokensErr(tokens, err))
+}

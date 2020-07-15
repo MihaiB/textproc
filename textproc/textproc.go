@@ -25,6 +25,7 @@ var (
 
 	catalogue = map[string]*procEntry{
 		"lf":     {textproc.LFLines, "Convert line terminators to LF"},
+		"sortli": {textproc.SortLFLinesI, "Sort lines case-insensitive (LF end of line)"},
 		"sortpi": {textproc.SortLFParagraphsI, "Sort paragraphs case-insensitive (LF end of line)"},
 		"trail":  {textproc.TrimLFTrailingSpace, "Remove trailing whitespace (LF end of line)"},
 		"nelf":   {textproc.NonEmptyFinalLF, "Ensure non-empty content ends with LF"},
