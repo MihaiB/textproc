@@ -154,6 +154,23 @@ func TestNewTokenReaderFromTokens(t *testing.T) {
 	}
 }
 
+func TestNewReaderFromTokenReader(t *testing.T) {
+	for _, tokens := range [][][]rune{
+		nil,
+		{[]rune("Êô"), []rune(""), nil, []rune("∮≡")},
+		{[]rune("ab"), nil, nil, []rune{}},
+	} {
+		var want []rune
+		for _, token := range tokens {
+			want = append(want, token...)
+		}
+
+		tr := textproc.NewTokenReaderFromTokens(tokens)
+		r := textproc.NewReaderFromTokenReader(tr)
+		checkReader(t, r, want, io.EOF)
+	}
+}
+
 func TestSortLFParagraphsI(t *testing.T) {
 	for s, want := range map[string]*struct {
 		runes []rune

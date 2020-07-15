@@ -234,6 +234,46 @@ func NewTokenReaderFromTokens(tokens [][]rune) TokenReader {
 	return &tokenReaderFromTokens{tokens}
 }
 
+type readerFromTokenReader struct {
+	r    TokenReader
+	err  error
+	next []rune
+}
+
+func (r *readerFromTokenReader) Read() (rune, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
+	if len(r.next) > 0 {
+		ch := r.next[0]
+		r.next = r.next[1:]
+		if len(r.next) == 0 {
+			r.next = nil
+		}
+		return ch, nil
+	}
+
+	for {
+		var token []rune
+		token, r.err = r.r.ReadToken()
+		if r.err != nil {
+			r.r = nil
+			return r.Read()
+		}
+		if len(token) == 0 {
+			continue
+		}
+		r.next = token
+		return r.Read()
+	}
+}
+
+// NewReaderFromTokenReader returns a new Reader reading from r.
+func NewReaderFromTokenReader(r TokenReader) Reader {
+	return &readerFromTokenReader{r: r}
+}
+
 type sortLfParagraphsI struct {
 	r         Reader
 	processed bool
