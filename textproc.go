@@ -214,6 +214,26 @@ func LFParagraphContent(r Reader) TokenReader {
 	return &lfParagraphContent{r: LFLineContent(r)}
 }
 
+type tokenReaderFromTokens struct {
+	tokens [][]rune
+}
+
+func (r *tokenReaderFromTokens) ReadToken() ([]rune, error) {
+	if len(r.tokens) == 0 {
+		r.tokens = nil
+		return nil, io.EOF
+	}
+
+	token := r.tokens[0]
+	r.tokens = r.tokens[1:]
+	return token, nil
+}
+
+// NewTokenReaderFromTokens returns a new TokenReader reading the tokens.
+func NewTokenReaderFromTokens(tokens [][]rune) TokenReader {
+	return &tokenReaderFromTokens{tokens}
+}
+
 type sortLfParagraphsI struct {
 	r         Reader
 	processed bool
