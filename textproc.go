@@ -214,14 +214,15 @@ func LFParagraphContent(r Reader) TokenReader {
 	return &lfParagraphContent{r: LFLineContent(r)}
 }
 
-type tokenReaderFromTokens struct {
+type tokenReaderFromTokensErr struct {
 	tokens [][]rune
+	err    error
 }
 
-func (r *tokenReaderFromTokens) ReadToken() ([]rune, error) {
+func (r *tokenReaderFromTokensErr) ReadToken() ([]rune, error) {
 	if len(r.tokens) == 0 {
 		r.tokens = nil
-		return nil, io.EOF
+		return nil, r.err
 	}
 
 	token := r.tokens[0]
@@ -229,9 +230,13 @@ func (r *tokenReaderFromTokens) ReadToken() ([]rune, error) {
 	return token, nil
 }
 
-// NewTokenReaderFromTokens returns a new TokenReader reading the tokens.
-func NewTokenReaderFromTokens(tokens [][]rune) TokenReader {
-	return &tokenReaderFromTokens{tokens}
+// NewTokenReaderFromTokensErr returns a new TokenReader reading the tokens
+// then returning err. It panics if err is nil.
+func NewTokenReaderFromTokensErr(tokens [][]rune, err error) TokenReader {
+	if err == nil {
+		panic("textproc: nil NewTokenReaderFromTokensErr err")
+	}
+	return &tokenReaderFromTokensErr{tokens, err}
 }
 
 type readerFromTokenReader struct {
@@ -274,17 +279,12 @@ func NewReaderFromTokenReader(r TokenReader) Reader {
 	return &readerFromTokenReader{r: r}
 }
 
-type sortLfParagraphsI struct {
-	r         Reader
-	processed bool
-	result    [][]rune
-	err       error
-}
-
-func (r *sortLfParagraphsI) process() {
-	var parContents [][]rune
-	parContents, r.err = ReadAllTokens(LFParagraphContent(r.r))
-	r.r = nil
+// SortLFParagraphsI returns a new Reader which reads
+// the content of all paragraphs from r using LFParagraphContent,
+// sorts them in case-insensitive order,
+// joins them with "\n\n" and adds "\n" after the last paragraph.
+func SortLFParagraphsI(r Reader) Reader {
+	parContents, err := ReadAllTokens(LFParagraphContent(r))
 	sortTokensI(parContents)
 
 	parSep := []rune{'\n', '\n'}
@@ -295,41 +295,9 @@ func (r *sortLfParagraphsI) process() {
 	}
 	if len(parContents) > 0 {
 		result[2*len(parContents)-1] = []rune{'\n'}
-		// only set r.result to a non-nil value if its length is > 0
-		r.result = result
 	}
 
-	r.processed = true
-}
-
-func (r *sortLfParagraphsI) readOne() rune {
-	val := r.result[0][0]
-	r.result[0] = r.result[0][1:]
-	if len(r.result[0]) == 0 {
-		r.result = r.result[1:]
-		if len(r.result) == 0 {
-			r.result = nil
-		}
-	}
-	return val
-}
-
-func (r *sortLfParagraphsI) Read() (rune, error) {
-	if !r.processed {
-		r.process()
-	}
-	if r.result != nil {
-		return r.readOne(), nil
-	}
-	return 0, r.err
-}
-
-// SortLFParagraphsI returns a new Reader which reads
-// the content of all paragraphs from r using LFParagraphContent,
-// sorts them in case-insensitive order,
-// joins them with "\n\n" and adds "\n" after the last paragraph.
-func SortLFParagraphsI(r Reader) Reader {
-	return &sortLfParagraphsI{r: r}
+	return NewReaderFromTokenReader(NewTokenReaderFromTokensErr(result, err))
 }
 
 type trimLfTrailingSpace struct {

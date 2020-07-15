@@ -1,6 +1,7 @@
 package textproc_test
 
 import (
+	"errors"
 	"github.com/MihaiB/textproc"
 	"io"
 	"strings"
@@ -137,7 +138,22 @@ func TestLFParagraphContent(t *testing.T) {
 	}
 }
 
-func TestNewTokenReaderFromTokens(t *testing.T) {
+func TestNewTokenReaderFromTokensErrPanic(t *testing.T) {
+	defer func() {
+		gotI := recover()
+		if gotS, ok := gotI.(string); !ok {
+			t.Fatal("Not a string:", gotI)
+		} else {
+			want := "textproc: nil NewTokenReaderFromTokensErr err"
+			if gotS != want {
+				t.Fatal("Want", want, "got", gotS)
+			}
+		}
+	}()
+	textproc.NewTokenReaderFromTokensErr([][]rune{[]rune("hi")}, nil)
+}
+
+func TestNewTokenReaderFromTokensErr(t *testing.T) {
 	for _, tokens := range [][][]rune{
 		nil,
 		{[]rune(""), []rune("Hej"), []rune("världen")},
@@ -149,8 +165,10 @@ func TestNewTokenReaderFromTokens(t *testing.T) {
 			want = append(want, duplicate)
 		}
 
-		r := textproc.NewTokenReaderFromTokens(tokens)
-		checkTokenReader(t, r, want, io.EOF)
+		err := errors.New("new error value")
+
+		r := textproc.NewTokenReaderFromTokensErr(tokens, err)
+		checkTokenReader(t, r, want, err)
 	}
 }
 
@@ -165,9 +183,11 @@ func TestNewReaderFromTokenReader(t *testing.T) {
 			want = append(want, token...)
 		}
 
-		tr := textproc.NewTokenReaderFromTokens(tokens)
+		err := errors.New("new error value")
+
+		tr := textproc.NewTokenReaderFromTokensErr(tokens, err)
 		r := textproc.NewReaderFromTokenReader(tr)
-		checkReader(t, r, want, io.EOF)
+		checkReader(t, r, want, err)
 	}
 }
 
