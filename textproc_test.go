@@ -94,9 +94,7 @@ func TestNewReaderFromRuneErrChanPanic(t *testing.T) {
 	errCh := make(chan error)
 	runes := []rune{'a', 'ê'}
 	go func() {
-		for _, r := range runes {
-			runeCh <- r
-		}
+		textproc.SendRunes(runes, runeCh)
 		close(runeCh)
 	}()
 	go close(errCh)
@@ -128,9 +126,7 @@ func TestNewReaderFromRuneErrChan(t *testing.T) {
 	} {
 		runeCh := make(chan rune)
 		go func() {
-			for _, r := range want.runes {
-				runeCh <- r
-			}
+			textproc.SendRunes(want.runes, runeCh)
 			close(runeCh)
 		}()
 
@@ -148,9 +144,7 @@ func TestNewTokenReaderFromTokenErrChanPanic(t *testing.T) {
 	tokenCh := make(chan []rune)
 	tokens := [][]rune{[]rune("Hi"), nil, []rune("✍")}
 	go func() {
-		for _, token := range tokens {
-			tokenCh <- token
-		}
+		textproc.SendTokens(tokens, tokenCh)
 		close(tokenCh)
 	}()
 
@@ -184,9 +178,7 @@ func TestNewTokenReaderFromTokenErrChan(t *testing.T) {
 	} {
 		tokenCh := make(chan []rune)
 		go func() {
-			for _, token := range want.tokens {
-				tokenCh <- token
-			}
+			textproc.SendTokens(want.tokens, tokenCh)
 			close(tokenCh)
 		}()
 

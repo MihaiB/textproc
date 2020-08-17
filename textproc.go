@@ -94,6 +94,20 @@ func NewIoReader(r Reader) io.Reader {
 	return &runeEncoder{r: r}
 }
 
+// SendRunes sends all runes on the channel.
+func SendRunes(runes []rune, ch chan<- rune) {
+	for _, r := range runes {
+		ch <- r
+	}
+}
+
+// SendTokens sends all tokens on the channel.
+func SendTokens(tokens [][]rune, ch chan<- []rune) {
+	for _, t := range tokens {
+		ch <- t
+	}
+}
+
 type readerFromRuneErrChan struct {
 	runeCh      <-chan rune
 	errCh       <-chan error
