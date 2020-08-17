@@ -21,7 +21,6 @@ type Reader interface {
 }
 
 // TokenReader reads tokens.
-// It does not keep a reference to the returned token's uderlying storage.
 // If err != nil callers must discard the returned token.
 type TokenReader interface {
 	ReadToken() (token []rune, err error)
