@@ -91,13 +91,12 @@ func TestNewIoReader(t *testing.T) {
 
 func TestNewReaderFromRuneErrChanPanic(t *testing.T) {
 	runeCh := make(chan rune)
-	errCh := make(chan error)
 	runes := []rune{'a', 'ê'}
-	go func() {
-		textproc.SendRunes(runes, runeCh)
-		close(runeCh)
-	}()
+	go textproc.SendRunesAndClose(runes, runeCh)
+
+	errCh := make(chan error)
 	go close(errCh)
+
 	r := textproc.NewReaderFromRuneErrChan(runeCh, errCh)
 
 	defer func() {
@@ -125,10 +124,7 @@ func TestNewReaderFromRuneErrChan(t *testing.T) {
 		{[]rune{'¡', 0, '⸘'}, io.EOF},
 	} {
 		runeCh := make(chan rune)
-		go func() {
-			textproc.SendRunes(want.runes, runeCh)
-			close(runeCh)
-		}()
+		go textproc.SendRunesAndClose(want.runes, runeCh)
 
 		errCh := make(chan error)
 		go func() {
@@ -143,10 +139,7 @@ func TestNewReaderFromRuneErrChan(t *testing.T) {
 func TestNewTokenReaderFromTokenErrChanPanic(t *testing.T) {
 	tokenCh := make(chan []rune)
 	tokens := [][]rune{[]rune("Hi"), nil, []rune("✍")}
-	go func() {
-		textproc.SendTokens(tokens, tokenCh)
-		close(tokenCh)
-	}()
+	go textproc.SendTokensAndClose(tokens, tokenCh)
 
 	errCh := make(chan error)
 	go close(errCh)
@@ -177,10 +170,7 @@ func TestNewTokenReaderFromTokenErrChan(t *testing.T) {
 		{[][]rune{{'𝄢'}, nil, []rune("𝓍÷𝓎")}, io.EOF},
 	} {
 		tokenCh := make(chan []rune)
-		go func() {
-			textproc.SendTokens(want.tokens, tokenCh)
-			close(tokenCh)
-		}()
+		go textproc.SendTokensAndClose(want.tokens, tokenCh)
 
 		errCh := make(chan error)
 		go func() {
@@ -198,13 +188,16 @@ func TestNewTokenReaderFromTokensErrPanic(t *testing.T) {
 		if gotS, ok := gotI.(string); !ok {
 			t.Fatal("Not a string:", gotI)
 		} else {
-			want := "textproc: nil NewTokenReaderFromTokensErr err"
+			want := "textproc: nil NewTokenReaderFromTokenErrChan err"
 			if gotS != want {
 				t.Fatal("Want", want, "got", gotS)
 			}
 		}
 	}()
-	textproc.NewTokenReaderFromTokensErr([][]rune{[]rune("hi")}, nil)
+
+	tokens := [][]rune{[]rune("hi")}
+	r := textproc.NewTokenReaderFromTokensErr(tokens, nil)
+	checkTokenReader(t, r, tokens, errors.New("dummy ignored value"))
 }
 
 func TestNewTokenReaderFromTokensErr(t *testing.T) {

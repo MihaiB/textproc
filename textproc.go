@@ -94,18 +94,36 @@ func NewIoReader(r Reader) io.Reader {
 	return &runeEncoder{r: r}
 }
 
-// SendRunes sends all runes on the channel.
+// SendRunes sends the runes on the channel.
 func SendRunes(runes []rune, ch chan<- rune) {
 	for _, r := range runes {
 		ch <- r
 	}
 }
 
-// SendTokens sends all tokens on the channel.
+// SendRunesAndClose sends the runes on the channel then closes it.
+func SendRunesAndClose(runes []rune, ch chan<- rune) {
+	SendRunes(runes, ch)
+	close(ch)
+}
+
+// SendTokens sends the tokens on the channel.
 func SendTokens(tokens [][]rune, ch chan<- []rune) {
 	for _, t := range tokens {
 		ch <- t
 	}
+}
+
+// SendTokensAndClose sends the tokens on the channel then closes it.
+func SendTokensAndClose(tokens [][]rune, ch chan<- []rune) {
+	SendTokens(tokens, ch)
+	close(ch)
+}
+
+// SendErrorAndClose sends the error on the channel then closes it.
+func SendErrorAndClose(err error, ch chan<- error) {
+	ch <- err
+	close(ch)
 }
 
 type readerFromRuneErrChan struct {
@@ -163,29 +181,16 @@ func NewTokenReaderFromTokenErrChan(tokenCh <-chan []rune,
 	return &tokenReaderFromTokenErrChan{tokenCh: tokenCh, errCh: errCh}
 }
 
-type tokenReaderFromTokensErr struct {
-	tokens [][]rune
-	err    error
-}
-
-func (r *tokenReaderFromTokensErr) ReadToken() ([]rune, error) {
-	if len(r.tokens) == 0 {
-		r.tokens = nil
-		return nil, r.err
-	}
-
-	token := r.tokens[0]
-	r.tokens = r.tokens[1:]
-	return token, nil
-}
-
-// NewTokenReaderFromTokensErr returns a new TokenReader reading the tokens
-// then returning err. It panics if err is nil.
+// NewTokenReaderFromTokensErr returns a new TokenReader which reads the tokens
+// then returns err or panics if err is nil.
 func NewTokenReaderFromTokensErr(tokens [][]rune, err error) TokenReader {
-	if err == nil {
-		panic("textproc: nil NewTokenReaderFromTokensErr err")
-	}
-	return &tokenReaderFromTokensErr{tokens, err}
+	tokenCh := make(chan []rune)
+	go SendTokensAndClose(tokens, tokenCh)
+
+	errCh := make(chan error)
+	go SendErrorAndClose(err, errCh)
+
+	return NewTokenReaderFromTokenErrChan(tokenCh, errCh)
 }
 
 type readerFromTokenReader struct {
