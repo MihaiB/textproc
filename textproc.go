@@ -94,6 +94,61 @@ func NewIoReader(r Reader) io.Reader {
 	return &runeEncoder{r: r}
 }
 
+type readerFromRuneErrChan struct {
+	runeCh      <-chan rune
+	errCh       <-chan error
+	errReceived bool
+	err         error
+}
+
+func (r *readerFromRuneErrChan) Read() (rune, error) {
+	if rn, ok := <-r.runeCh; ok {
+		return rn, nil
+	}
+	if !r.errReceived {
+		r.err = <-r.errCh
+		r.errReceived = true
+	}
+	if r.err == nil {
+		panic("textproc: nil NewReaderFromRuneErrChan err")
+	}
+	return 0, r.err
+}
+
+// NewReaderFromRuneErrChan returns a new Reader
+// which reads all the runes then one error and panics if the error is nil.
+func NewReaderFromRuneErrChan(runeCh <-chan rune, errCh <-chan error) Reader {
+	return &readerFromRuneErrChan{runeCh: runeCh, errCh: errCh}
+}
+
+type tokenReaderFromTokenErrChan struct {
+	tokenCh     <-chan []rune
+	errCh       <-chan error
+	errReceived bool
+	err         error
+}
+
+func (r *tokenReaderFromTokenErrChan) ReadToken() ([]rune, error) {
+	if token, ok := <-r.tokenCh; ok {
+		return token, nil
+	}
+	if !r.errReceived {
+		r.err = <-r.errCh
+		r.errReceived = true
+	}
+	if r.err == nil {
+		panic("textproc: nil NewTokenReaderFromTokenErrChan err")
+	}
+	return nil, r.err
+}
+
+// NewTokenReaderFromTokenErrChan returns a new TokenReader
+// which reads all the tokens then one error and panics if the error is nil.
+func NewTokenReaderFromTokenErrChan(tokenCh <-chan []rune,
+	errCh <-chan error) TokenReader {
+	return &tokenReaderFromTokenErrChan{tokenCh: tokenCh, errCh: errCh}
+}
+
 type tokenReaderFromTokensErr struct {
 	tokens [][]rune
 	err    error

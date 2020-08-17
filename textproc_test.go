@@ -89,6 +89,117 @@ func TestNewIoReader(t *testing.T) {
 	}
 }
 
+func TestNewReaderFromRuneErrChanPanic(t *testing.T) {
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	runes := []rune{'a', 'ê'}
+	go func() {
+		for _, r := range runes {
+			runeCh <- r
+		}
+		close(runeCh)
+	}()
+	go close(errCh)
+	r := textproc.NewReaderFromRuneErrChan(runeCh, errCh)
+
+	defer func() {
+		gotI := recover()
+		if gotS, ok := gotI.(string); !ok {
+			t.Fatal("Not a string:", gotI)
+		} else {
+			want := "textproc: nil NewReaderFromRuneErrChan err"
+			if gotS != want {
+				t.Fatal("Want", want, "got", gotS)
+			}
+		}
+	}()
+
+	checkReader(t, r, runes, errors.New("dummy ignored value"))
+}
+
+func TestNewReaderFromRuneErrChan(t *testing.T) {
+	for _, want := range []struct {
+		runes []rune
+		err   error
+	}{
+		{nil, io.EOF},
+		{nil, textproc.ErrInvalidUTF8},
+		{[]rune{'¡', 0, '⸘'}, io.EOF},
+	} {
+		runeCh := make(chan rune)
+		go func() {
+			for _, r := range want.runes {
+				runeCh <- r
+			}
+			close(runeCh)
+		}()
+
+		errCh := make(chan error)
+		go func() {
+			errCh <- want.err
+		}()
+
+		r := textproc.NewReaderFromRuneErrChan(runeCh, errCh)
+		checkReader(t, r, want.runes, want.err)
+	}
+}
+
+func TestNewTokenReaderFromTokenErrChanPanic(t *testing.T) {
+	tokenCh := make(chan []rune)
+	tokens := [][]rune{[]rune("Hi"), nil, []rune("✍")}
+	go func() {
+		for _, token := range tokens {
+			tokenCh <- token
+		}
+		close(tokenCh)
+	}()
+
+	errCh := make(chan error)
+	go close(errCh)
+
+	r := textproc.NewTokenReaderFromTokenErrChan(tokenCh, errCh)
+
+	defer func() {
+		gotI := recover()
+		if gotS, ok := gotI.(string); !ok {
+			t.Fatal("Not a string:", gotI)
+		} else {
+			want := "textproc: nil NewTokenReaderFromTokenErrChan err"
+			if gotS != want {
+				t.Fatal("Want", want, "got", gotS)
+			}
+		}
+	}()
+	checkTokenReader(t, r, tokens, errors.New("dummy ignored value"))
+}
+
+func TestNewTokenReaderFromTokenErrChan(t *testing.T) {
+	for _, want := range []struct {
+		tokens [][]rune
+		err    error
+	}{
+		{nil, io.EOF},
+		{[][]rune{}, textproc.ErrInvalidUTF8},
+		{[][]rune{{'𝄢'}, nil, []rune("𝓍÷𝓎")}, io.EOF},
+	} {
+		tokenCh := make(chan []rune)
+		go func() {
+			for _, token := range want.tokens {
+				tokenCh <- token
+			}
+			close(tokenCh)
+		}()
+
+		errCh := make(chan error)
+		go func() {
+			errCh <- want.err
+		}()
+
+		r := textproc.NewTokenReaderFromTokenErrChan(tokenCh, errCh)
+		checkTokenReader(t, r, want.tokens, want.err)
+	}
+}
+
 func TestNewTokenReaderFromTokensErrPanic(t *testing.T) {
 	defer func() {
 		gotI := recover()
