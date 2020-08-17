@@ -95,6 +95,110 @@ func NewIoReader(r Reader) io.Reader {
 	return &runeEncoder{r: r}
 }
 
+type tokenReaderFromTokensErr struct {
+	tokens [][]rune
+	err    error
+}
+
+func (r *tokenReaderFromTokensErr) ReadToken() ([]rune, error) {
+	if len(r.tokens) == 0 {
+		r.tokens = nil
+		return nil, r.err
+	}
+
+	token := r.tokens[0]
+	r.tokens = r.tokens[1:]
+	return token, nil
+}
+
+// NewTokenReaderFromTokensErr returns a new TokenReader reading the tokens
+// then returning err. It panics if err is nil.
+func NewTokenReaderFromTokensErr(tokens [][]rune, err error) TokenReader {
+	if err == nil {
+		panic("textproc: nil NewTokenReaderFromTokensErr err")
+	}
+	return &tokenReaderFromTokensErr{tokens, err}
+}
+
+type readerFromTokenReader struct {
+	r    TokenReader
+	err  error
+	next []rune
+}
+
+func (r *readerFromTokenReader) Read() (rune, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
+	if len(r.next) > 0 {
+		ch := r.next[0]
+		r.next = r.next[1:]
+		if len(r.next) == 0 {
+			r.next = nil
+		}
+		return ch, nil
+	}
+
+	for {
+		var token []rune
+		token, r.err = r.r.ReadToken()
+		if r.err != nil {
+			r.r = nil
+			return r.Read()
+		}
+		if len(token) == 0 {
+			continue
+		}
+		r.next = token
+		return r.Read()
+	}
+}
+
+// NewReaderFromTokenReader returns a new Reader reading from r.
+func NewReaderFromTokenReader(r TokenReader) Reader {
+	return &readerFromTokenReader{r: r}
+}
+
+// ReadAllTokens reads tokens from r until it encounters an error
+// and returns the tokens from all but the last call
+// and the error from the last call.
+func ReadAllTokens(r TokenReader) (tokens [][]rune, err error) {
+	for {
+		var token []rune
+		if token, err = r.ReadToken(); err != nil {
+			return
+		}
+		tokens = append(tokens, token)
+	}
+}
+
+type tokenLowercaseT struct {
+	token     []rune
+	lowercase string
+}
+
+func getTokenLowercaseT(token []rune) *tokenLowercaseT {
+	lowerRunes := make([]rune, len(token))
+	for i := range token {
+		lowerRunes[i] = unicode.ToLower(token[i])
+	}
+	return &tokenLowercaseT{token, string(lowerRunes)}
+}
+
+func sortTokensI(tokens [][]rune) {
+	lowercaseTokens := make([]*tokenLowercaseT, len(tokens))
+	for i := range tokens {
+		lowercaseTokens[i] = getTokenLowercaseT(tokens[i])
+	}
+	sort.SliceStable(lowercaseTokens, func(i, j int) bool {
+		return lowercaseTokens[i].lowercase < lowercaseTokens[j].lowercase
+	})
+	for i := range lowercaseTokens {
+		tokens[i] = lowercaseTokens[i].token
+	}
+}
+
 type lfLines struct {
 	r      Reader
 	loaded bool // ch and err are the next, unused result from r.Read()
@@ -212,71 +316,6 @@ func (r *lfParagraphContent) ReadToken() ([]rune, error) {
 // A paragraph consists of adjacent non-empty lines terminated by "\n".
 func LFParagraphContent(r Reader) TokenReader {
 	return &lfParagraphContent{r: LFLineContent(r)}
-}
-
-type tokenReaderFromTokensErr struct {
-	tokens [][]rune
-	err    error
-}
-
-func (r *tokenReaderFromTokensErr) ReadToken() ([]rune, error) {
-	if len(r.tokens) == 0 {
-		r.tokens = nil
-		return nil, r.err
-	}
-
-	token := r.tokens[0]
-	r.tokens = r.tokens[1:]
-	return token, nil
-}
-
-// NewTokenReaderFromTokensErr returns a new TokenReader reading the tokens
-// then returning err. It panics if err is nil.
-func NewTokenReaderFromTokensErr(tokens [][]rune, err error) TokenReader {
-	if err == nil {
-		panic("textproc: nil NewTokenReaderFromTokensErr err")
-	}
-	return &tokenReaderFromTokensErr{tokens, err}
-}
-
-type readerFromTokenReader struct {
-	r    TokenReader
-	err  error
-	next []rune
-}
-
-func (r *readerFromTokenReader) Read() (rune, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-
-	if len(r.next) > 0 {
-		ch := r.next[0]
-		r.next = r.next[1:]
-		if len(r.next) == 0 {
-			r.next = nil
-		}
-		return ch, nil
-	}
-
-	for {
-		var token []rune
-		token, r.err = r.r.ReadToken()
-		if r.err != nil {
-			r.r = nil
-			return r.Read()
-		}
-		if len(token) == 0 {
-			continue
-		}
-		r.next = token
-		return r.Read()
-	}
-}
-
-// NewReaderFromTokenReader returns a new Reader reading from r.
-func NewReaderFromTokenReader(r TokenReader) Reader {
-	return &readerFromTokenReader{r: r}
 }
 
 // SortLFParagraphsI returns a new Reader which reads
@@ -464,45 +503,6 @@ func (r *trimTrailingEmptyLFLines) Read() (rune, error) {
 // Lines are terminated by "\n".
 func TrimTrailingEmptyLFLines(r Reader) Reader {
 	return &trimTrailingEmptyLFLines{r: r}
-}
-
-// ReadAllTokens reads tokens from r until it encounters an error
-// and returns the tokens from all but the last call
-// and the error from the last call.
-func ReadAllTokens(r TokenReader) (tokens [][]rune, err error) {
-	for {
-		var token []rune
-		if token, err = r.ReadToken(); err != nil {
-			return
-		}
-		tokens = append(tokens, token)
-	}
-}
-
-type tokenLowercaseT struct {
-	token     []rune
-	lowercase string
-}
-
-func getTokenLowercaseT(token []rune) *tokenLowercaseT {
-	lowerRunes := make([]rune, len(token))
-	for i := range token {
-		lowerRunes[i] = unicode.ToLower(token[i])
-	}
-	return &tokenLowercaseT{token, string(lowerRunes)}
-}
-
-func sortTokensI(tokens [][]rune) {
-	lowercaseTokens := make([]*tokenLowercaseT, len(tokens))
-	for i := range tokens {
-		lowercaseTokens[i] = getTokenLowercaseT(tokens[i])
-	}
-	sort.SliceStable(lowercaseTokens, func(i, j int) bool {
-		return lowercaseTokens[i].lowercase < lowercaseTokens[j].lowercase
-	})
-	for i := range lowercaseTokens {
-		tokens[i] = lowercaseTokens[i].token
-	}
 }
 
 // SortLFLinesI returns a new Reader which reads

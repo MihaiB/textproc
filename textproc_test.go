@@ -89,55 +89,6 @@ func TestNewIoReader(t *testing.T) {
 	}
 }
 
-func TestLFLines(t *testing.T) {
-	for s, want := range map[string]*struct {
-		runes []rune
-		err   error
-	}{
-		"":                  {nil, io.EOF},
-		"\ra\r\rb\r\nc\n\r": {[]rune("\na\n\nb\nc\n\n"), io.EOF},
-		"•\r\r\n\r≡":        {[]rune("•\n\n\n≡"), io.EOF},
-	} {
-		r := textproc.LFLines(textproc.NewReader(strings.NewReader(s)))
-		checkReader(t, r, want.runes, want.err)
-	}
-}
-
-func TestLFLineContent(t *testing.T) {
-	for s, want := range map[string]*struct {
-		tokens [][]rune
-		err    error
-	}{
-		"":          {nil, io.EOF},
-		"α":         {[][]rune{[]rune("α")}, io.EOF},
-		"\r\nβè\n":  {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
-		"\n\nz":     {[][]rune{nil, nil, []rune("z")}, io.EOF},
-		"ζ\nξ\xffa": {[][]rune{{'ζ'}}, textproc.ErrInvalidUTF8},
-	} {
-		textprocReader := textproc.NewReader(strings.NewReader(s))
-		r := textproc.LFLineContent(textprocReader)
-		checkTokenReader(t, r, want.tokens, want.err)
-	}
-}
-
-func TestLFParagraphContent(t *testing.T) {
-	for s, want := range map[string]*struct {
-		tokens [][]rune
-		err    error
-	}{
-		"": {nil, io.EOF},
-		"a\r\nb\n \nc\n\nd": {[][]rune{
-			[]rune("a\r\nb\n \nc"),
-			[]rune("d")}, io.EOF},
-		"\n\nδσ\n\n\n":  {[][]rune{[]rune("δσ")}, io.EOF},
-		"ø\n\nb\nc\xff": {[][]rune{[]rune("ø")}, textproc.ErrInvalidUTF8},
-	} {
-		textprocReader := textproc.NewReader(strings.NewReader(s))
-		r := textproc.LFParagraphContent(textprocReader)
-		checkTokenReader(t, r, want.tokens, want.err)
-	}
-}
-
 func TestNewTokenReaderFromTokensErrPanic(t *testing.T) {
 	defer func() {
 		gotI := recover()
@@ -191,6 +142,81 @@ func TestNewReaderFromTokenReader(t *testing.T) {
 	}
 }
 
+func TestReadAllTokens(t *testing.T) {
+	for s, want := range map[string]struct {
+		tokens [][]rune
+		err    error
+	}{
+		"":        {nil, io.EOF},
+		"»\n[}\n": {[][]rune{{'»'}, {'[', '}'}}, io.EOF},
+	} {
+		lineContentR := textproc.LFLineContent(textproc.NewReader(strings.NewReader(s)))
+		gotTokens, gotErr := textproc.ReadAllTokens(lineContentR)
+		if gotErr != want.err {
+			t.Fatal("want", want.err, "got", gotErr)
+		}
+		if len(gotTokens) != len(want.tokens) {
+			t.Fatal("want", len(want.tokens), "tokens, got",
+				len(gotTokens))
+		}
+		for i, gotToken := range gotTokens {
+			wantToken := want.tokens[i]
+			if string(gotToken) != string(wantToken) {
+				t.Fatal("want", wantToken, "got", gotToken)
+			}
+		}
+	}
+}
+
+func TestLFLines(t *testing.T) {
+	for s, want := range map[string]*struct {
+		runes []rune
+		err   error
+	}{
+		"":                  {nil, io.EOF},
+		"\ra\r\rb\r\nc\n\r": {[]rune("\na\n\nb\nc\n\n"), io.EOF},
+		"•\r\r\n\r≡":        {[]rune("•\n\n\n≡"), io.EOF},
+	} {
+		r := textproc.LFLines(textproc.NewReader(strings.NewReader(s)))
+		checkReader(t, r, want.runes, want.err)
+	}
+}
+
+func TestLFLineContent(t *testing.T) {
+	for s, want := range map[string]*struct {
+		tokens [][]rune
+		err    error
+	}{
+		"":          {nil, io.EOF},
+		"α":         {[][]rune{[]rune("α")}, io.EOF},
+		"\r\nβè\n":  {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
+		"\n\nz":     {[][]rune{nil, nil, []rune("z")}, io.EOF},
+		"ζ\nξ\xffa": {[][]rune{{'ζ'}}, textproc.ErrInvalidUTF8},
+	} {
+		textprocReader := textproc.NewReader(strings.NewReader(s))
+		r := textproc.LFLineContent(textprocReader)
+		checkTokenReader(t, r, want.tokens, want.err)
+	}
+}
+
+func TestLFParagraphContent(t *testing.T) {
+	for s, want := range map[string]*struct {
+		tokens [][]rune
+		err    error
+	}{
+		"": {nil, io.EOF},
+		"a\r\nb\n \nc\n\nd": {[][]rune{
+			[]rune("a\r\nb\n \nc"),
+			[]rune("d")}, io.EOF},
+		"\n\nδσ\n\n\n":  {[][]rune{[]rune("δσ")}, io.EOF},
+		"ø\n\nb\nc\xff": {[][]rune{[]rune("ø")}, textproc.ErrInvalidUTF8},
+	} {
+		textprocReader := textproc.NewReader(strings.NewReader(s))
+		r := textproc.LFParagraphContent(textprocReader)
+		checkTokenReader(t, r, want.tokens, want.err)
+	}
+}
+
 func TestSortLFParagraphsI(t *testing.T) {
 	for s, want := range map[string]*struct {
 		runes []rune
@@ -230,7 +256,7 @@ func TestTrimLFTrailingSpace(t *testing.T) {
 	}
 }
 
-func TestFinalLF(t *testing.T) {
+func TestNonEmptyFinalLF(t *testing.T) {
 	for s, want := range map[string]*struct {
 		runes []rune
 		err   error
@@ -286,32 +312,6 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 		r := textproc.TrimTrailingEmptyLFLines(textproc.NewReader(
 			strings.NewReader(s)))
 		checkReader(t, r, want.runes, want.err)
-	}
-}
-
-func TestReadAllTokens(t *testing.T) {
-	for s, want := range map[string]struct {
-		tokens [][]rune
-		err    error
-	}{
-		"":        {nil, io.EOF},
-		"»\n[}\n": {[][]rune{{'»'}, {'[', '}'}}, io.EOF},
-	} {
-		lineContentR := textproc.LFLineContent(textproc.NewReader(strings.NewReader(s)))
-		gotTokens, gotErr := textproc.ReadAllTokens(lineContentR)
-		if gotErr != want.err {
-			t.Fatal("want", want.err, "got", gotErr)
-		}
-		if len(gotTokens) != len(want.tokens) {
-			t.Fatal("want", len(want.tokens), "tokens, got",
-				len(gotTokens))
-		}
-		for i, gotToken := range gotTokens {
-			wantToken := want.tokens[i]
-			if string(gotToken) != string(wantToken) {
-				t.Fatal("want", wantToken, "got", gotToken)
-			}
-		}
 	}
 }
 
