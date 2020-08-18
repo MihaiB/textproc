@@ -16,7 +16,8 @@ func checkReader(t *testing.T, r textproc.Reader, runes []rune, err error) {
 			t.Fatal("Want", rn, nil, "got", got, gotErr)
 		}
 	}
-	for i := 0; i < 3; i++ {
+	const errCalls = 3
+	for i := 0; i < errCalls; i++ {
 		got, gotErr := r.Read()
 		if got != 0 || gotErr != err {
 			t.Fatal("Want", 0, err, "got", got, gotErr)
@@ -40,6 +41,17 @@ func checkTokenReader(t *testing.T, r textproc.TokenReader,
 				"got", gotToken, gotErr)
 		}
 	}
+}
+
+func copyRunes(runes []rune) []rune {
+	return append([]rune{}, runes...)
+}
+
+func copyTokens(tokens [][]rune) (result [][]rune) {
+	for _, token := range tokens {
+		result = append(result, copyRunes(token))
+	}
+	return
 }
 
 func TestNewReader(t *testing.T) {
@@ -92,7 +104,7 @@ func TestNewIoReader(t *testing.T) {
 func TestNewReaderFromRuneErrChanPanic(t *testing.T) {
 	runeCh := make(chan rune)
 	runes := []rune{'a', 'ê'}
-	go textproc.SendRunesAndClose(runes, runeCh)
+	go textproc.SendRunesAndClose(copyRunes(runes), runeCh)
 
 	errCh := make(chan error)
 	go close(errCh)
@@ -124,7 +136,7 @@ func TestNewReaderFromRuneErrChan(t *testing.T) {
 		{[]rune{'¡', 0, '⸘'}, io.EOF},
 	} {
 		runeCh := make(chan rune)
-		go textproc.SendRunesAndClose(want.runes, runeCh)
+		go textproc.SendRunesAndClose(copyRunes(want.runes), runeCh)
 
 		errCh := make(chan error)
 		go func() {
@@ -139,7 +151,7 @@ func TestNewReaderFromRuneErrChan(t *testing.T) {
 func TestNewTokenReaderFromTokenErrChanPanic(t *testing.T) {
 	tokenCh := make(chan []rune)
 	tokens := [][]rune{[]rune("Hi"), nil, []rune("✍")}
-	go textproc.SendTokensAndClose(tokens, tokenCh)
+	go textproc.SendTokensAndClose(copyTokens(tokens), tokenCh)
 
 	errCh := make(chan error)
 	go close(errCh)
@@ -170,7 +182,7 @@ func TestNewTokenReaderFromTokenErrChan(t *testing.T) {
 		{[][]rune{{'𝄢'}, nil, []rune("𝓍÷𝓎")}, io.EOF},
 	} {
 		tokenCh := make(chan []rune)
-		go textproc.SendTokensAndClose(want.tokens, tokenCh)
+		go textproc.SendTokensAndClose(copyTokens(want.tokens), tokenCh)
 
 		errCh := make(chan error)
 		go func() {
@@ -196,7 +208,7 @@ func TestNewTokenReaderFromTokensErrPanic(t *testing.T) {
 	}()
 
 	tokens := [][]rune{[]rune("hi")}
-	r := textproc.NewTokenReaderFromTokensErr(tokens, nil)
+	r := textproc.NewTokenReaderFromTokensErr(copyTokens(tokens), nil)
 	checkTokenReader(t, r, tokens, errors.New("dummy ignored value"))
 }
 
@@ -205,17 +217,10 @@ func TestNewTokenReaderFromTokensErr(t *testing.T) {
 		nil,
 		{[]rune(""), []rune("Hej"), []rune("världen")},
 	} {
-		var want [][]rune
-		for _, token := range tokens {
-			duplicate := make([]rune, len(token))
-			copy(duplicate, token)
-			want = append(want, duplicate)
-		}
-
 		err := errors.New("new error value")
 
-		r := textproc.NewTokenReaderFromTokensErr(tokens, err)
-		checkTokenReader(t, r, want, err)
+		r := textproc.NewTokenReaderFromTokensErr(copyTokens(tokens), err)
+		checkTokenReader(t, r, tokens, err)
 	}
 }
 
@@ -232,7 +237,7 @@ func TestNewReaderFromTokenReader(t *testing.T) {
 
 		err := errors.New("new error value")
 
-		tr := textproc.NewTokenReaderFromTokensErr(tokens, err)
+		tr := textproc.NewTokenReaderFromTokensErr(copyTokens(tokens), err)
 		r := textproc.NewReaderFromTokenReader(tr)
 		checkReader(t, r, want, err)
 	}
