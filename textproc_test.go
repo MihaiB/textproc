@@ -399,16 +399,18 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 		runes []rune
 		err   error
 	}{
-		"":           {nil, io.EOF},
-		"\n":         {nil, io.EOF},
-		"\n\n":       {nil, io.EOF},
-		"\n\n\n":     {nil, io.EOF},
-		"\n\n\n\r":   {[]rune("\n\n\n\r"), io.EOF},
-		"\n\n\nwz":   {[]rune("\n\n\nwz"), io.EOF},
-		"a\n\n\n":    {[]rune("a\n"), io.EOF},
-		"\n\na\n\nb": {[]rune("\n\na\n\nb"), io.EOF},
-		"x\n\ny\n\n": {[]rune("x\n\ny\n"), io.EOF},
-		"x\n\ny\n":   {[]rune("x\n\ny\n"), io.EOF},
+		"":                 {nil, io.EOF},
+		"\n":               {nil, io.EOF},
+		"\n\n":             {nil, io.EOF},
+		"\n\n\n":           {nil, io.EOF},
+		"\n\n\n\r":         {[]rune("\n\n\n\r"), io.EOF},
+		"\n\n\nwz":         {[]rune("\n\n\nwz"), io.EOF},
+		"a\n\n\n":          {[]rune("a\n"), io.EOF},
+		"\n\na\n\nb":       {[]rune("\n\na\n\nb"), io.EOF},
+		"x\n\ny\n\n":       {[]rune("x\n\ny\n"), io.EOF},
+		"x\n\ny\n":         {[]rune("x\n\ny\n"), io.EOF},
+		"a\n\nb\n\n\n\xcc": {[]rune("a\n\nb\n"), textproc.ErrInvalidUTF8},
+		"a\n\nbc\xcc":      {[]rune("a\n\nbc"), textproc.ErrInvalidUTF8},
 	} {
 		r := textproc.TrimTrailingEmptyLFLines(textproc.NewReader(
 			strings.NewReader(s)))

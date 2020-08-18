@@ -193,44 +193,23 @@ func NewTokenReaderFromTokensErr(tokens [][]rune, err error) TokenReader {
 	return NewTokenReaderFromTokenErrChan(tokenCh, errCh)
 }
 
-type readerFromTokenReader struct {
-	r    TokenReader
-	err  error
-	next []rune
-}
-
-func (r *readerFromTokenReader) Read() (rune, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-
-	if len(r.next) > 0 {
-		ch := r.next[0]
-		r.next = r.next[1:]
-		if len(r.next) == 0 {
-			r.next = nil
-		}
-		return ch, nil
-	}
-
-	for {
-		var token []rune
-		token, r.err = r.r.ReadToken()
-		if r.err != nil {
-			r.r = nil
-			return r.Read()
-		}
-		if len(token) == 0 {
-			continue
-		}
-		r.next = token
-		return r.Read()
-	}
-}
-
 // NewReaderFromTokenReader returns a new Reader reading from r.
 func NewReaderFromTokenReader(r TokenReader) Reader {
-	return &readerFromTokenReader{r: r}
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	go func() {
+		for {
+			token, err := r.ReadToken()
+			if err != nil {
+				close(runeCh)
+				SendErrorAndClose(err, errCh)
+				return
+			}
+			SendRunes(token, runeCh)
+		}
+	}()
+
+	return NewReaderFromRuneErrChan(runeCh, errCh)
 }
 
 // ReadAllTokens reads tokens from r until it encounters an error
@@ -272,44 +251,44 @@ func sortTokensI(tokens [][]rune) {
 	}
 }
 
-type lfLines struct {
-	r      Reader
-	loaded bool // ch and err are the next, unused result from r.Read()
-	ch     rune
-	err    error
-}
+func lfLines(reader Reader, runeCh chan<- rune, errCh chan<- error) {
+	var r rune
+	var err error
 
-func (r *lfLines) load() {
-	r.ch, r.err = r.r.Read()
-	if r.err != nil {
-		r.r = nil
-	}
-	r.loaded = true
-}
-
-func (r *lfLines) Read() (rune, error) {
-	if !r.loaded {
-		r.load()
-	}
-	if r.err != nil {
-		return 0, r.err
-	}
-	if r.ch != '\r' {
-		r.loaded = false
-		return r.ch, nil
+	load := func() {
+		r, err = reader.Read()
 	}
 
-	r.load()
-	if r.err == nil && r.ch == '\n' {
-		r.loaded = false
+	load()
+
+	for {
+		if err != nil {
+			close(runeCh)
+			SendErrorAndClose(err, errCh)
+			return
+		}
+
+		if r != '\r' {
+			runeCh <- r
+			load()
+			continue
+		}
+
+		runeCh <- '\n'
+		load()
+		if err == nil && r == '\n' {
+			load()
+		}
 	}
-	return '\n', nil
 }
 
 // LFLines returns a new Reader reading from r,
 // converting "\r" and "\r\n" to "\n".
 func LFLines(r Reader) Reader {
-	return &lfLines{r: r}
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	go lfLines(r, runeCh, errCh)
+	return NewReaderFromRuneErrChan(runeCh, errCh)
 }
 
 type lfLineContent struct {
@@ -412,111 +391,88 @@ func SortLFParagraphsI(r Reader) Reader {
 	return NewReaderFromTokenReader(NewTokenReaderFromTokensErr(result, err))
 }
 
-type trimLfTrailingSpace struct {
-	r    Reader
-	err  error
-	next []rune
-}
-
-func (r *trimLfTrailingSpace) Read() (rune, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-
-	if len(r.next) > 0 {
-		val := r.next[0]
-		r.next = r.next[1:]
-		if len(r.next) == 0 {
-			r.next = nil
+func trimLFTrailingSpace(reader Reader,
+	runeCh chan<- rune, errCh chan<- error) {
+	getNext := func() ([]rune, error) {
+		var runes []rune
+		for {
+			r, err := reader.Read()
+			if err != nil {
+				return nil, err
+			}
+			if r == '\n' {
+				return []rune{r}, nil
+			}
+			runes = append(runes, r)
+			if !unicode.IsSpace(r) {
+				return runes, nil
+			}
 		}
-		return val, nil
 	}
 
-	var pending []rune
 	for {
-		var val rune
-		if val, r.err = r.r.Read(); r.err != nil {
-			r.r = nil
-			return r.Read()
+		runes, err := getNext()
+		if err != nil {
+			close(runeCh)
+			SendErrorAndClose(err, errCh)
+			return
 		}
-		if val == '\n' {
-			return val, nil
-		}
-		if unicode.IsSpace(val) {
-			pending = append(pending, val)
-			continue
-		}
-
-		if len(pending) == 0 {
-			return val, nil
-		}
-		r.next = append(pending, val)
-		return r.Read()
+		SendRunes(runes, runeCh)
 	}
 }
 
 // TrimLFTrailingSpace returns a new Reader which reads from r
 // and removes white space at the end of lines. Lines are terminated by "\n".
 func TrimLFTrailingSpace(r Reader) Reader {
-	return &trimLfTrailingSpace{r: r}
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	go trimLFTrailingSpace(r, runeCh, errCh)
+	return NewReaderFromRuneErrChan(runeCh, errCh)
 }
 
-type nonEmptyFinalLF struct {
-	r        Reader
-	err      error
-	nonEmpty bool
-	finalLF  bool
-}
+func nonEmptyFinalLF(r Reader, runeCh chan<- rune, errCh chan<- error) {
+	prev := '\n'
+	char, err := r.Read()
 
-func (r *nonEmptyFinalLF) Read() (rune, error) {
-	if r.err != nil {
-		return 0, r.err
+	for err == nil {
+		runeCh <- char
+		prev = char
+		char, err = r.Read()
 	}
 
-	var val rune
-	val, r.err = r.r.Read()
-	if r.err != nil {
-		r.r = nil
-		if r.err == io.EOF && r.nonEmpty && !r.finalLF {
-			r.finalLF = true
-			return '\n', nil
-		}
-		return r.Read()
+	if err == io.EOF && prev != '\n' {
+		runeCh <- '\n'
 	}
-	r.nonEmpty = true
-	r.finalLF = val == '\n'
-	return val, nil
+	close(runeCh)
+	SendErrorAndClose(err, errCh)
 }
 
 // NonEmptyFinalLF returns a new Reader which reads from r
 // and ensures non-empty content ends with "\n".
 func NonEmptyFinalLF(r Reader) Reader {
-	return &nonEmptyFinalLF{r: r}
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	go nonEmptyFinalLF(r, runeCh, errCh)
+	return NewReaderFromRuneErrChan(runeCh, errCh)
 }
 
 type trimLeadingLF struct {
 	r           Reader
-	err         error
-	afterPrefix bool
+	passthrough bool
 }
 
 func (r *trimLeadingLF) Read() (rune, error) {
-	for r.err == nil {
-		var val rune
-		val, r.err = r.r.Read()
-		if r.err != nil {
-			r.r = nil
-			continue
+	if !r.passthrough {
+		char, err := r.r.Read()
+		for err == nil && char == '\n' {
+			char, err = r.r.Read()
 		}
-		if !r.afterPrefix {
-			if val == '\n' {
-				continue
-			}
-			r.afterPrefix = true
-		}
-		return val, nil
+
+		r.passthrough = true
+		return char, err
 	}
-	return 0, r.err
+
+	return r.r.Read()
 }
 
 // TrimLeadingLF returns a new Reader which reads from r
@@ -525,49 +481,29 @@ func TrimLeadingLF(r Reader) Reader {
 	return &trimLeadingLF{r: r}
 }
 
-type trimTrailingEmptyLFLines struct {
-	r          Reader
-	err        error
-	withinLine bool
-	next       []rune
-}
+func trimTrailingEmptyLFLines(r Reader,
+	runeCh chan<- rune, errCh chan<- error) {
+	prev := '\n'
+	pendingNewlines := 0
 
-func (r *trimTrailingEmptyLFLines) Read() (rune, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-
-	if len(r.next) > 0 {
-		val := r.next[0]
-		r.next = r.next[1:]
-		if len(r.next) == 0 {
-			r.next = nil
-		}
-		return val, nil
-	}
-
-	var val rune
-	if val, r.err = r.r.Read(); r.err != nil {
-		r.r = nil
-		return r.Read()
-	}
-	if r.withinLine {
-		r.withinLine = val != '\n'
-		return val, nil
-	}
-
-	var pending []rune
 	for {
-		pending = append(pending, val)
-		r.withinLine = val != '\n'
-		if r.withinLine {
-			r.next = pending
-			return r.Read()
+		char, err := r.Read()
+		if err != nil {
+			close(runeCh)
+			SendErrorAndClose(err, errCh)
+			return
 		}
-		if val, r.err = r.r.Read(); r.err != nil {
-			r.r = nil
-			return r.Read()
+
+		if prev != '\n' || char != '\n' {
+			for ; pendingNewlines > 0; pendingNewlines-- {
+				runeCh <- '\n'
+			}
+			runeCh <- char
+			prev = char
+			continue
 		}
+
+		pendingNewlines++
 	}
 }
 
@@ -575,7 +511,10 @@ func (r *trimTrailingEmptyLFLines) Read() (rune, error) {
 // and removes empty lines at the end of the input.
 // Lines are terminated by "\n".
 func TrimTrailingEmptyLFLines(r Reader) Reader {
-	return &trimTrailingEmptyLFLines{r: r}
+	runeCh := make(chan rune)
+	errCh := make(chan error)
+	go trimTrailingEmptyLFLines(r, runeCh, errCh)
+	return NewReaderFromRuneErrChan(runeCh, errCh)
 }
 
 // SortLFLinesI returns a new Reader which reads
