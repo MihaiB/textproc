@@ -35,10 +35,13 @@ func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan 
 	}
 }
 
-func checkProcessor(t *testing.T, p textproc.Processor, in, out string) {
-	dry, errCh := textproc.Read(strings.NewReader(in))
-	wet := p(dry)
-	checkChannels(t, wet, []rune(out), errCh, io.EOF)
+func checkProcessor(t *testing.T, p textproc.Processor,
+	inOut map[string]string) {
+	for in, out := range inOut {
+		dry, errCh := textproc.Read(strings.NewReader(in))
+		wet := p(dry)
+		checkChannels(t, wet, []rune(out), errCh, io.EOF)
+	}
 }
 
 func TestRead(t *testing.T) {
@@ -66,25 +69,23 @@ func TestProcessorTypeMatch(*testing.T) {
 }
 
 func TestConvertLineTerminatorsToLF(t *testing.T) {
-	for in, out := range map[string]string{
+	inOut := map[string]string{
 		"":                  "",
 		"\ra\r\rb\r\nc\n\r": "\na\n\nb\nc\n\n",
 		"•\r\r\n\r≡":        "•\n\n\n≡",
 		"\r\r\r\r\r":        "\n\n\n\n\n",
-	} {
-		checkProcessor(t, textproc.ConvertLineTerminatorsToLF, in, out)
 	}
+	checkProcessor(t, textproc.ConvertLineTerminatorsToLF, inOut)
 }
 
 func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
-	for in, out := range map[string]string{
+	inOut := map[string]string{
 		"":            "",
 		"a":           "a\n",
 		"z\n":         "z\n",
 		"\nQ":         "\nQ\n",
 		"One\nTwo\r":  "One\nTwo\r\n",
 		"1\n2\n3\n\n": "1\n2\n3\n\n",
-	} {
-		checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, in, out)
 	}
+	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
 }
