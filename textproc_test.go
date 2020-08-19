@@ -169,3 +169,17 @@ func TestSortLFLinesI(t *testing.T) {
 	}
 	checkProcessor(t, SortLFLinesI, inOut)
 }
+
+func TestGetLFParagraphContent(t *testing.T) {
+	for in, wants := range map[string][]string{
+		"":                     nil,
+		"a\r\nb\n \nc\n\nd":    {"a\r\nb\n \nc", "d"},
+		"\n\nδσ\n\n\n":         {"δσ"},
+		"\n\nδσ\n\n\n\nx\ny\n": {"δσ", "x\ny"},
+		"ø\n\nb\nc\n":          {"ø", "b\nc"},
+	} {
+		c, _ := Read(strings.NewReader(in))
+		texts := getLFParagraphContent(c)
+		checkTexts(t, texts, wants)
+	}
+}

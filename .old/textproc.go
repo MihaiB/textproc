@@ -1,48 +1,5 @@
 package textproc
 
-type lfParagraphContent struct {
-	r   TokenReader
-	err error
-}
-
-func (r *lfParagraphContent) ReadToken() ([]rune, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-
-	var par []rune
-	for {
-		var line []rune
-		line, r.err = r.r.ReadToken()
-		if r.err != nil {
-			r.r = nil
-			// Discard the partial paragraph on error.
-			// Otherwise the caller can't tell it is incomplete.
-			if r.err == io.EOF && len(par) > 0 {
-				return par, nil
-			}
-			return r.ReadToken()
-		}
-		if len(line) == 0 {
-			if len(par) > 0 {
-				return par, nil
-			}
-			continue
-		}
-		if len(par) > 0 {
-			par = append(par, '\n')
-		}
-		par = append(par, line...)
-	}
-}
-
-// LFParagraphContent returns a new TokenReader reading
-// the content of paragraphs from r, excluding the final line terminator.
-// A paragraph consists of adjacent non-empty lines terminated by "\n".
-func LFParagraphContent(r Reader) TokenReader {
-	return &lfParagraphContent{r: LFLineContent(r)}
-}
-
 // SortLFParagraphsI returns a new Reader which reads
 // the content of all paragraphs from r using LFParagraphContent,
 // sorts them in case-insensitive order,

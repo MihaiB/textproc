@@ -1,23 +1,5 @@
 package textproc_test
 
-func TestLFParagraphContent(t *testing.T) {
-	for s, want := range map[string]*struct {
-		tokens [][]rune
-		err    error
-	}{
-		"": {nil, io.EOF},
-		"a\r\nb\n \nc\n\nd": {[][]rune{
-			[]rune("a\r\nb\n \nc"),
-			[]rune("d")}, io.EOF},
-		"\n\nδσ\n\n\n":  {[][]rune{[]rune("δσ")}, io.EOF},
-		"ø\n\nb\nc\xff": {[][]rune{[]rune("ø")}, textproc.ErrInvalidUTF8},
-	} {
-		textprocReader := textproc.NewReader(strings.NewReader(s))
-		r := textproc.LFParagraphContent(textprocReader)
-		checkTokenReader(t, r, want.tokens, want.err)
-	}
-}
-
 func TestSortLFParagraphsI(t *testing.T) {
 	for s, want := range map[string]*struct {
 		runes []rune

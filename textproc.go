@@ -252,3 +252,35 @@ func SortLFLinesI(in <-chan rune) <-chan rune {
 
 	return out
 }
+
+// getLFParagraphContent returns the content of all paragraphs
+// excluding the line terminator of the paragraph's last line.
+// A paragraph consists of adjacent non-empty lines.
+// Lines are terminated by "\n".
+func getLFParagraphContent(in <-chan rune) [][]rune {
+	lines := getLFLineContent(in)
+	var paragraphs [][]rune
+	var par []rune
+
+	for _, line := range lines {
+		if len(line) != 0 {
+			if len(par) > 0 {
+				par = append(par, '\n')
+			}
+			par = append(par, line...)
+			continue
+		}
+
+		if len(par) != 0 {
+			paragraphs = append(paragraphs, par)
+			par = nil
+		}
+	}
+
+	if len(par) != 0 {
+		paragraphs = append(paragraphs, par)
+		par = nil
+	}
+
+	return paragraphs
+}
