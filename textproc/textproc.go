@@ -37,7 +37,7 @@ var catalogue = map[string]*catalogueEntry{
 	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
 		"Ensure non-empty content ends with LF"},
 	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
-	"trail": {textproc.TrimLFTrailingSpaces,
+	"trail": {textproc.TrimLFTrailingWhiteSpace,
 		"Remove trailing whitespace (LF end of line)"},
 	"trimlf": {chainProcessors(textproc.TrimLeadingEmptyLFLines,
 		textproc.TrimTrailingEmptyLFLines),

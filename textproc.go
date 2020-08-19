@@ -100,9 +100,9 @@ func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
 	return out
 }
 
-// TrimLFTrailingSpaces removes white space at the end of lines.
+// TrimLFTrailingWhiteSpace removes white space at the end of lines.
 // Lines are terminated by "\n".
-func TrimLFTrailingSpaces(in <-chan rune) <-chan rune {
+func TrimLFTrailingWhiteSpace(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 
 	go func() {

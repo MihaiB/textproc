@@ -65,7 +65,7 @@ func TestProcessorTypeMatch(*testing.T) {
 	for range []textproc.Processor{
 		textproc.ConvertLineTerminatorsToLF,
 		textproc.EnsureFinalLFIfNonEmpty,
-		textproc.TrimLFTrailingSpaces,
+		textproc.TrimLFTrailingWhiteSpace,
 		textproc.TrimLeadingEmptyLFLines,
 		textproc.TrimTrailingEmptyLFLines,
 	} {
@@ -94,14 +94,14 @@ func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
 	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
 }
 
-func TestTrimLFTrailingSpaces(t *testing.T) {
+func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 	inOut := map[string]string{
 		"":                                   "",
 		" @":                                 " @",
 		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": "\nT\n\n sp\n\tmix \tz\n",
 		"no final LF \t":                     "no final LF",
 	}
-	checkProcessor(t, textproc.TrimLFTrailingSpaces, inOut)
+	checkProcessor(t, textproc.TrimLFTrailingWhiteSpace, inOut)
 }
 
 func TestTrimLeadingEmptyLFLines(t *testing.T) {
