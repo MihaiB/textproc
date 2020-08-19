@@ -106,8 +106,7 @@ func TestParseArgsProcs(t *testing.T) {
 		{[]string{"cmd"}, 0},
 		{[]string{"cmd", "lf"}, 1},
 		{[]string{"cmd", "lf", "lf"}, 2},
-		// TODO
-		//{[]string{"cmd", "lf", "sortpi", "lf"}, 3},
+		{[]string{"cmd", "lf", "sortpi", "lf"}, 3},
 		{[]string{"cmd", "norm"}, 1},
 	} {
 		args, err := parseArgs(tc.osArgs)

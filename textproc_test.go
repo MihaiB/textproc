@@ -183,3 +183,14 @@ func TestGetLFParagraphContent(t *testing.T) {
 		checkTexts(t, texts, wants)
 	}
 }
+
+func TestSortLFParagraphsI(t *testing.T) {
+	inOut := map[string]string{
+		"":                          "",
+		"\n\n\n":                    "",
+		"Par1":                      "Par1\n",
+		"Hi\n👽\n\nalien\n\n\nspace": "alien\n\nHi\n👽\n\nspace\n",
+		"NEON\n\nargon\n\nradon\nxenon\n\n\n\nKr\nHe\n\n": "argon\n\nKr\nHe\n\nNEON\n\nradon\nxenon\n",
+	}
+	checkProcessor(t, SortLFParagraphsI, inOut)
+}

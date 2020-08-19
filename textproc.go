@@ -233,7 +233,7 @@ func getLFLineContent(in <-chan rune) [][]rune {
 // SortLFLinesI reads the content of all lines
 // excluding the line terminator "\n",
 // sorts that content in case-insensitive order
-// and appends "\n" after each item.
+// and adds "\n" after each item.
 func SortLFLinesI(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 
@@ -242,8 +242,8 @@ func SortLFLinesI(in <-chan rune) <-chan rune {
 		sortTextsI(lines)
 
 		for _, line := range lines {
-			for _, r := range line {
-				out <- r
+			for _, char := range line {
+				out <- char
 			}
 			out <- '\n'
 		}
@@ -254,7 +254,8 @@ func SortLFLinesI(in <-chan rune) <-chan rune {
 }
 
 // getLFParagraphContent returns the content of all paragraphs
-// excluding the line terminator of the paragraph's last line.
+// excluding the line terminator of a paragraph's last line.
+//
 // A paragraph consists of adjacent non-empty lines.
 // Lines are terminated by "\n".
 func getLFParagraphContent(in <-chan rune) [][]rune {
@@ -283,4 +284,33 @@ func getLFParagraphContent(in <-chan rune) [][]rune {
 	}
 
 	return paragraphs
+}
+
+// SortLFParagraphsI reads the content of all paragraphs
+// excluding the line terminator of a paragraph's last line,
+// sorts that content in case-insensitive order,
+// joins the items with "\n\n" and adds "\n" after the last item.
+//
+// A paragraph consists of adjacent non-empty lines.
+// Lines are terminated by "\n".
+func SortLFParagraphsI(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		paragraphs := getLFParagraphContent(in)
+		sortTextsI(paragraphs)
+
+		for i, par := range paragraphs {
+			if i > 0 {
+				out <- '\n'
+			}
+			for _, char := range par {
+				out <- char
+			}
+			out <- '\n'
+		}
+		close(out)
+	}()
+
+	return out
 }
