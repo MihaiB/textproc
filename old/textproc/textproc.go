@@ -1,4 +1,3 @@
-// Textproc processes text.
 package main
 
 import (
