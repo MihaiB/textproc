@@ -224,6 +224,7 @@ func getLFLineContent(in <-chan rune) [][]rune {
 
 	if len(crt) > 0 {
 		texts = append(texts, crt)
+		crt = nil
 	}
 
 	return texts
@@ -231,7 +232,8 @@ func getLFLineContent(in <-chan rune) [][]rune {
 
 // SortLFLinesI reads the content of all lines
 // excluding the line terminator "\n",
-// sorts them in case-insensitive order and appends "\n" after each.
+// sorts that content in case-insensitive order
+// and appends "\n" after each item.
 func SortLFLinesI(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 

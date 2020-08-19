@@ -43,6 +43,18 @@ func checkProcessor(t *testing.T, p Processor, inOut map[string]string) {
 	}
 }
 
+func checkTexts(t *testing.T, gots [][]rune, wants []string) {
+	if len(gots) != len(wants) {
+		t.Fatal("Want", len(wants), "got", len(gots))
+	}
+	for i, want := range wants {
+		got := string(gots[i])
+		if got != want {
+			t.Fatalf("Want %#v got %#v", want, got)
+		}
+	}
+}
+
 func TestRead(t *testing.T) {
 	for s, want := range map[string]*struct {
 		runes []rune
@@ -134,7 +146,7 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 }
 
 func TestGetLFLineContent(t *testing.T) {
-	for in, out := range map[string][]string{
+	for in, wants := range map[string][]string{
 		"":         nil,
 		"α":        {"α"},
 		"\r\nβè\n": {"\r", "βè"},
@@ -143,9 +155,7 @@ func TestGetLFLineContent(t *testing.T) {
 	} {
 		c, _ := Read(strings.NewReader(in))
 		texts := getLFLineContent(c)
-		if len(texts) != len(out) {
-			t.Fatal("want", out, "got", texts)
-		}
+		checkTexts(t, texts, wants)
 	}
 }
 
