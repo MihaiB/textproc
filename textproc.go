@@ -224,9 +224,7 @@ func getLFLineContent(in <-chan rune) [][]rune {
 
 	if len(crt) > 0 {
 		texts = append(texts, crt)
-		crt = nil
 	}
-
 	return texts
 }
 
@@ -280,9 +278,7 @@ func getLFParagraphContent(in <-chan rune) [][]rune {
 
 	if len(par) != 0 {
 		paragraphs = append(paragraphs, par)
-		par = nil
 	}
-
 	return paragraphs
 }
 
