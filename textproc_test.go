@@ -1,7 +1,6 @@
-package textproc_test
+package textproc
 
 import (
-	"github.com/MihaiB/textproc/v2"
 	"io"
 	"strings"
 	"testing"
@@ -36,10 +35,9 @@ func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan 
 	}
 }
 
-func checkProcessor(t *testing.T, p textproc.Processor,
-	inOut map[string]string) {
+func checkProcessor(t *testing.T, p Processor, inOut map[string]string) {
 	for in, out := range inOut {
-		dry, errCh := textproc.Read(strings.NewReader(in))
+		dry, errCh := Read(strings.NewReader(in))
 		wet := p(dry)
 		checkChannels(t, wet, []rune(out), errCh, io.EOF)
 	}
@@ -51,23 +49,24 @@ func TestRead(t *testing.T) {
 		err   error
 	}{
 		"":            {nil, io.EOF},
-		"\x80a":       {nil, textproc.ErrInvalidUTF8},
+		"\x80a":       {nil, ErrInvalidUTF8},
 		"a•🧐/":        {[]rune("a•🧐/"), io.EOF},
 		"@\uFFFD\t":   {[]rune("@\uFFFD\t"), io.EOF},
-		"=•\xf0\x9f!": {[]rune("=•"), textproc.ErrInvalidUTF8},
+		"=•\xf0\x9f!": {[]rune("=•"), ErrInvalidUTF8},
 	} {
-		runeCh, errCh := textproc.Read(strings.NewReader(s))
+		runeCh, errCh := Read(strings.NewReader(s))
 		checkChannels(t, runeCh, want.runes, errCh, want.err)
 	}
 }
 
 func TestProcessorTypeMatch(*testing.T) {
-	for range []textproc.Processor{
-		textproc.ConvertLineTerminatorsToLF,
-		textproc.EnsureFinalLFIfNonEmpty,
-		textproc.TrimLFTrailingWhiteSpace,
-		textproc.TrimLeadingEmptyLFLines,
-		textproc.TrimTrailingEmptyLFLines,
+	for range []Processor{
+		ConvertLineTerminatorsToLF,
+		EnsureFinalLFIfNonEmpty,
+		TrimLFTrailingWhiteSpace,
+		TrimLeadingEmptyLFLines,
+		TrimTrailingEmptyLFLines,
+		SortLFLinesI,
 	} {
 	}
 }
@@ -79,7 +78,7 @@ func TestConvertLineTerminatorsToLF(t *testing.T) {
 		"•\r\r\n\r≡":        "•\n\n\n≡",
 		"\r\r\r\r\r":        "\n\n\n\n\n",
 	}
-	checkProcessor(t, textproc.ConvertLineTerminatorsToLF, inOut)
+	checkProcessor(t, ConvertLineTerminatorsToLF, inOut)
 }
 
 func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
@@ -91,7 +90,7 @@ func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
 		"One\nTwo\r":  "One\nTwo\r\n",
 		"1\n2\n3\n\n": "1\n2\n3\n\n",
 	}
-	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
+	checkProcessor(t, EnsureFinalLFIfNonEmpty, inOut)
 }
 
 func TestTrimLFTrailingWhiteSpace(t *testing.T) {
@@ -101,7 +100,7 @@ func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": "\nT\n\n sp\n\tmix \tz\n",
 		"no final LF \t":                     "no final LF",
 	}
-	checkProcessor(t, textproc.TrimLFTrailingWhiteSpace, inOut)
+	checkProcessor(t, TrimLFTrailingWhiteSpace, inOut)
 }
 
 func TestTrimLeadingEmptyLFLines(t *testing.T) {
@@ -113,7 +112,7 @@ func TestTrimLeadingEmptyLFLines(t *testing.T) {
 		"ab\nc":         "ab\nc",
 		"\n\nij\n\nk\n": "ij\n\nk\n",
 	}
-	checkProcessor(t, textproc.TrimLeadingEmptyLFLines, inOut)
+	checkProcessor(t, TrimLeadingEmptyLFLines, inOut)
 }
 
 func TestTrimTrailingEmptyLFLines(t *testing.T) {
@@ -131,5 +130,32 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 		"a\n\nb\n\n\n": "a\n\nb\n",
 		"a\n\nbc":      "a\n\nbc",
 	}
-	checkProcessor(t, textproc.TrimTrailingEmptyLFLines, inOut)
+	checkProcessor(t, TrimTrailingEmptyLFLines, inOut)
+}
+
+func TestGetLFLineContent(t *testing.T) {
+	for in, out := range map[string][]string{
+		"":         nil,
+		"α":        {"α"},
+		"\r\nβè\n": {"\r", "βè"},
+		"\n\nz":    {"", "", "z"},
+		"ζ\nξ a":   {"ζ", "ξ a"},
+	} {
+		c, _ := Read(strings.NewReader(in))
+		texts := getLFLineContent(c)
+		if len(texts) != len(out) {
+			t.Fatal("want", out, "got", texts)
+		}
+	}
+}
+
+func TestSortLFLinesI(t *testing.T) {
+	inOut := map[string]string{
+		"":                       "",
+		"Q\n\na\nrrr":            "\na\nQ\nrrr\n",
+		"second\nfirst\nmiddle.": "first\nmiddle.\nsecond\n",
+		"Bb\nbB\nBB\na\n":        "a\nBb\nbB\nBB\n",
+		"bz\n\nA\n\n\nC":         "\n\n\nA\nbz\nC\n",
+	}
+	checkProcessor(t, SortLFLinesI, inOut)
 }

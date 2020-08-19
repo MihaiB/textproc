@@ -233,23 +233,6 @@ func TestReadAllTokens(t *testing.T) {
 	}
 }
 
-func TestLFLineContent(t *testing.T) {
-	for s, want := range map[string]*struct {
-		tokens [][]rune
-		err    error
-	}{
-		"":          {nil, io.EOF},
-		"α":         {[][]rune{[]rune("α")}, io.EOF},
-		"\r\nβè\n":  {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
-		"\n\nz":     {[][]rune{nil, nil, []rune("z")}, io.EOF},
-		"ζ\nξ\xffa": {[][]rune{{'ζ'}}, textproc.ErrInvalidUTF8},
-	} {
-		textprocReader := textproc.NewReader(strings.NewReader(s))
-		r := textproc.LFLineContent(textprocReader)
-		checkTokenReader(t, r, want.tokens, want.err)
-	}
-}
-
 func TestLFParagraphContent(t *testing.T) {
 	for s, want := range map[string]*struct {
 		tokens [][]rune
@@ -284,21 +267,6 @@ func TestSortLFParagraphsI(t *testing.T) {
 	} {
 		r := textproc.SortLFParagraphsI(textproc.NewReader(
 			strings.NewReader(s)))
-		checkReader(t, r, want.runes, want.err)
-	}
-}
-
-func TestSortLFLinesI(t *testing.T) {
-	for s, want := range map[string]struct {
-		runes []rune
-		err   error
-	}{
-		"":                       {nil, io.EOF},
-		"Q\n\na\nrrr":            {[]rune("\na\nQ\nrrr\n"), io.EOF},
-		"second\nfirst\nno\xcc.": {[]rune("first\nsecond\n"), textproc.ErrInvalidUTF8},
-		"Bb\nbB\nBB\na\n":        {[]rune("a\nBb\nbB\nBB\n"), io.EOF},
-	} {
-		r := textproc.SortLFLinesI(textproc.NewReader(strings.NewReader(s)))
 		checkReader(t, r, want.runes, want.err)
 	}
 }

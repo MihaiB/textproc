@@ -1,71 +1,5 @@
 package textproc
 
-import (
-	"sort"
-)
-
-type tokenLowercaseT struct {
-	token     []rune
-	lowercase string
-}
-
-func getTokenLowercaseT(token []rune) *tokenLowercaseT {
-	lowerRunes := make([]rune, len(token))
-	for i := range token {
-		lowerRunes[i] = unicode.ToLower(token[i])
-	}
-	return &tokenLowercaseT{token, string(lowerRunes)}
-}
-
-func sortTokensI(tokens [][]rune) {
-	lowercaseTokens := make([]*tokenLowercaseT, len(tokens))
-	for i := range tokens {
-		lowercaseTokens[i] = getTokenLowercaseT(tokens[i])
-	}
-	sort.SliceStable(lowercaseTokens, func(i, j int) bool {
-		return lowercaseTokens[i].lowercase < lowercaseTokens[j].lowercase
-	})
-	for i := range lowercaseTokens {
-		tokens[i] = lowercaseTokens[i].token
-	}
-}
-
-type lfLineContent struct {
-	r   Reader
-	err error
-}
-
-func (r *lfLineContent) ReadToken() ([]rune, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	var token []rune
-	for {
-		var ch rune
-		ch, r.err = r.r.Read()
-		if r.err != nil {
-			r.r = nil
-			// Discard the partial line on error.
-			// Otherwise the caller can't distinguish it
-			// from a complete line ending in '\n' or EOF.
-			if r.err == io.EOF && len(token) > 0 {
-				return token, nil
-			}
-			return r.ReadToken()
-		}
-		if ch == '\n' {
-			return token, nil
-		}
-		token = append(token, ch)
-	}
-}
-
-// LFLineContent returns a new TokenReader reading the content of lines from r,
-// excluding the line terminator "\n".
-func LFLineContent(r Reader) TokenReader {
-	return &lfLineContent{r: r}
-}
-
 type lfParagraphContent struct {
 	r   TokenReader
 	err error
@@ -128,19 +62,4 @@ func SortLFParagraphsI(r Reader) Reader {
 	}
 
 	return NewReaderFromTokenReader(NewTokenReaderFromTokensErr(result, err))
-}
-
-// SortLFLinesI returns a new Reader which reads
-// the content of all lines from r using LFLineContent,
-// sorts them in case-insensitive order and appends "\n" after each.
-func SortLFLinesI(r Reader) Reader {
-	lines, err := ReadAllTokens(LFLineContent(r))
-	sortTokensI(lines)
-	tokens := make([][]rune, 2*len(lines))
-	lineTerm := []rune{'\n'}
-	for i := range lines {
-		tokens[2*i] = lines[i]
-		tokens[2*i+1] = lineTerm
-	}
-	return NewReaderFromTokenReader(NewTokenReaderFromTokensErr(tokens, err))
 }

@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"sort"
 	"unicode"
 	"unicode/utf8"
 )
@@ -48,6 +49,32 @@ func Read(r io.Reader) (<-chan rune, <-chan error) {
 
 // A Processor processes runes.
 type Processor = func(<-chan rune) <-chan rune
+
+type textLowercaseT struct {
+	text      []rune
+	lowercase string
+}
+
+func getTextLowercaseT(text []rune) *textLowercaseT {
+	lowerRunes := make([]rune, len(text))
+	for i := range text {
+		lowerRunes[i] = unicode.ToLower(text[i])
+	}
+	return &textLowercaseT{text, string(lowerRunes)}
+}
+
+func sortTextsI(texts [][]rune) {
+	lowercaseTexts := make([]*textLowercaseT, len(texts))
+	for i := range texts {
+		lowercaseTexts[i] = getTextLowercaseT(texts[i])
+	}
+	sort.SliceStable(lowercaseTexts, func(i, j int) bool {
+		return lowercaseTexts[i].lowercase < lowercaseTexts[j].lowercase
+	})
+	for i := range lowercaseTexts {
+		texts[i] = lowercaseTexts[i].text
+	}
+}
 
 // ConvertLineTerminatorsToLF converts "\r" and "\r\n" to "\n".
 func ConvertLineTerminatorsToLF(in <-chan rune) <-chan rune {
@@ -176,6 +203,51 @@ func TrimTrailingEmptyLFLines(in <-chan rune) <-chan rune {
 			atLineStart = r == '\n'
 		}
 
+		close(out)
+	}()
+
+	return out
+}
+
+// getLFLineContent returns the content of all lines
+// excluding the line terminator "\n".
+func getLFLineContent(in <-chan rune) [][]rune {
+	var texts [][]rune
+	var crt []rune
+
+	for r := range in {
+		if r == '\n' {
+			texts = append(texts, crt)
+			crt = nil
+			continue
+		}
+
+		crt = append(crt, r)
+	}
+
+	if len(crt) > 0 {
+		texts = append(texts, crt)
+	}
+
+	return texts
+}
+
+// SortLFLinesI reads the content of all lines
+// excluding the line terminator "\n",
+// sorts them in case-insensitive order and appends "\n" after each.
+func SortLFLinesI(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		lines := getLFLineContent(in)
+		sortTextsI(lines)
+
+		for _, line := range lines {
+			for _, r := range line {
+				out <- r
+			}
+			out <- '\n'
+		}
 		close(out)
 	}()
 
