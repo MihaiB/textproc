@@ -2,28 +2,8 @@ package textproc_test
 
 import (
 	"errors"
-	"github.com/MihaiB/textproc"
-	"io"
-	"strings"
-	"testing"
 	"unicode/utf8"
 )
-
-func checkReader(t *testing.T, r textproc.Reader, runes []rune, err error) {
-	for _, rn := range runes {
-		got, gotErr := r.Read()
-		if got != rn || gotErr != nil {
-			t.Fatal("Want", rn, nil, "got", got, gotErr)
-		}
-	}
-	const errCalls = 3
-	for i := 0; i < errCalls; i++ {
-		got, gotErr := r.Read()
-		if got != 0 || gotErr != err {
-			t.Fatal("Want", 0, err, "got", got, gotErr)
-		}
-	}
-}
 
 func checkTokenReader(t *testing.T, r textproc.TokenReader,
 	tokens [][]rune, err error) {
@@ -52,22 +32,6 @@ func copyTokens(tokens [][]rune) (result [][]rune) {
 		result = append(result, copyRunes(token))
 	}
 	return
-}
-
-func TestNewReader(t *testing.T) {
-	for s, want := range map[string]*struct {
-		runes []rune
-		err   error
-	}{
-		"":            {nil, io.EOF},
-		"\x80a":       {nil, textproc.ErrInvalidUTF8},
-		"a•🧐/":        {[]rune("a•🧐/"), io.EOF},
-		"@\uFFFD\t":   {[]rune("@\uFFFD\t"), io.EOF},
-		"=•\xf0\x9f!": {[]rune("=•"), textproc.ErrInvalidUTF8},
-	} {
-		r := textproc.NewReader(strings.NewReader(s))
-		checkReader(t, r, want.runes, want.err)
-	}
 }
 
 func TestNewIoReader(t *testing.T) {

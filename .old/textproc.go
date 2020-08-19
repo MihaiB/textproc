@@ -1,56 +1,14 @@
 package textproc
 
 import (
-	"bufio"
-	"errors"
-	"io"
 	"sort"
 	"unicode"
-	"unicode/utf8"
 )
-
-const runeErrorSize = len(string(utf8.RuneError))
-
-// ErrInvalidUTF8 is the error returned when the input is not valid UTF-8.
-var ErrInvalidUTF8 = errors.New("Invalid UTF-8")
-
-// Reader reads runes.
-type Reader interface {
-	Read() (rune, error)
-}
 
 // TokenReader reads tokens.
 // If err != nil callers must discard the returned token.
 type TokenReader interface {
 	ReadToken() (token []rune, err error)
-}
-
-type runeDecoder struct {
-	r   io.RuneReader
-	err error
-}
-
-func (dec *runeDecoder) Read() (rune, error) {
-	if dec.err != nil {
-		return 0, dec.err
-	}
-
-	r, size, err := dec.r.ReadRune()
-	if err == nil && r == utf8.RuneError && size != runeErrorSize {
-		err = ErrInvalidUTF8
-	}
-	if err != nil {
-		dec.err = err
-		dec.r = nil
-		return dec.Read()
-	}
-	return r, nil
-}
-
-// NewReader returns a new Reader reading from r.
-// The new Reader returns ErrInvalidUTF8 if the input is not valid UTF-8.
-func NewReader(r io.Reader) Reader {
-	return &runeDecoder{r: bufio.NewReader(r)}
 }
 
 type runeEncoder struct {
