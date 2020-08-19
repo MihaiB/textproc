@@ -2,12 +2,96 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"github.com/MihaiB/textproc/v2"
 	"io"
 	"os"
+	"sort"
+	"strings"
 	"unicode/utf8"
 )
+
+var errNoProgramName = errors.New("no program name (os.Args empty)")
+
+type catalogueEntry struct {
+	processor textproc.Processor
+	doc       string
+}
+
+var normChain = []string{"lf", "nelf"}
+
+var catalogue = map[string]*catalogueEntry{
+	"lf": {textproc.ConvertLineTerminatorsToLF,
+		"Convert line terminators to LF"},
+	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
+		"Ensure non-empty content ends with LF"},
+	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
+}
+
+func init() {
+	// Avoid initialization loop for catalogue chain processors
+
+	chainCatalogueKeys := func(keys []string) textproc.Processor {
+		return func(c <-chan rune) <-chan rune {
+			for _, key := range keys {
+				c = catalogue[key].processor(c)
+			}
+			return c
+		}
+	}
+
+	catalogue["norm"].processor = chainCatalogueKeys(normChain)
+}
+
+var catalogueKeys = func() []string {
+	var keys []string
+	for k := range catalogue {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}()
+
+type cmdArgs struct {
+	processors []textproc.Processor
+}
+
+func parseArgs(osArgs []string) (*cmdArgs, error) {
+	if len(osArgs) == 0 {
+		return nil, errNoProgramName
+	}
+
+	fs := flag.NewFlagSet(osArgs[0], flag.ExitOnError)
+	fs.Usage = func() {
+		fmt.Fprint(fs.Output(), "usage: ", fs.Name(), " [processors]\n")
+		fmt.Fprint(fs.Output(), `
+Process text from stdin to stdout.
+
+processors:
+`)
+		for _, k := range catalogueKeys {
+			fmt.Fprintf(fs.Output(), "\t%s\t%s\n",
+				k, catalogue[k].doc)
+		}
+		// say ‘optional arguments:’ first, if there will be flags
+		fs.PrintDefaults()
+	}
+	if err := fs.Parse(osArgs[1:]); err != nil {
+		return nil, err
+	}
+
+	args := &cmdArgs{}
+	for _, k := range fs.Args() {
+		entry, ok := catalogue[k]
+		if !ok {
+			return nil, errors.New("unknown processor: " + k)
+		}
+		args.processors = append(args.processors, entry.processor)
+	}
+	return args, nil
+}
 
 func errExit(err error) {
 	if len(os.Args) > 0 && os.Args[0] != "" {
@@ -38,9 +122,17 @@ func write(runeCh <-chan rune, errCh <-chan error, w io.Writer) error {
 }
 
 func main() {
-	runeCh, errCh := textproc.Read(os.Stdin)
+	args, err := parseArgs(os.Args)
+	if err != nil {
+		errExit(err)
+	}
 
-	if err := write(runeCh, errCh, os.Stdout); err != nil {
+	runeCh, errCh := textproc.Read(os.Stdin)
+	for _, processor := range args.processors {
+		runeCh = processor(runeCh)
+	}
+
+	if err = write(runeCh, errCh, os.Stdout); err != nil {
 		errExit(err)
 	}
 }
