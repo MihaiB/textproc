@@ -20,7 +20,16 @@ type catalogueEntry struct {
 	doc       string
 }
 
-var normChain = []string{"lf", "nelf"}
+var normChain = []string{"lf", "trail", "trimlf", "nelf"}
+
+func chainProcessors(processors ...textproc.Processor) textproc.Processor {
+	return func(c <-chan rune) <-chan rune {
+		for _, p := range processors {
+			c = p(c)
+		}
+		return c
+	}
+}
 
 var catalogue = map[string]*catalogueEntry{
 	"lf": {textproc.ConvertLineTerminatorsToLF,
@@ -28,6 +37,11 @@ var catalogue = map[string]*catalogueEntry{
 	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
 		"Ensure non-empty content ends with LF"},
 	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
+	"trail": {textproc.TrimLFTrailingSpaces,
+		"Remove trailing whitespace (LF end of line)"},
+	"trimlf": {chainProcessors(textproc.TrimLeadingEmptyLFLines,
+		textproc.TrimTrailingEmptyLFLines),
+		"Trim leading and trailing empty lines (LF end of line)"},
 }
 
 func init() {

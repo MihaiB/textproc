@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -93,6 +94,88 @@ func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
 		if last != '\n' {
 			out <- '\n'
 		}
+		close(out)
+	}()
+
+	return out
+}
+
+// TrimLFTrailingSpaces removes white space at the end of lines.
+// Lines are terminated by "\n".
+func TrimLFTrailingSpaces(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		var spaces []rune
+		for r := range in {
+			if r == '\n' {
+				spaces = nil
+				out <- r
+				continue
+			}
+
+			if unicode.IsSpace(r) {
+				spaces = append(spaces, r)
+				continue
+			}
+
+			for _, space := range spaces {
+				out <- space
+			}
+			spaces = nil
+			out <- r
+		}
+
+		close(out)
+	}()
+
+	return out
+}
+
+// TrimLeadingEmptyLFLines removes empty lines at the start of the input.
+// Lines are terminated by "\n".
+func TrimLeadingEmptyLFLines(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		skipping := true
+		for r := range in {
+			if skipping {
+				if r == '\n' {
+					continue
+				}
+				skipping = false
+			}
+			out <- r
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+// TrimTrailingEmptyLFLines removes empty lines at the end of the input.
+// Lines are terminated by "\n".
+func TrimTrailingEmptyLFLines(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		atLineStart := true
+		pendingNewlines := 0
+
+		for r := range in {
+			if atLineStart && r == '\n' {
+				pendingNewlines++
+				continue
+			}
+
+			for ; pendingNewlines > 0; pendingNewlines-- {
+				out <- '\n'
+			}
+			out <- r
+			atLineStart = r == '\n'
+		}
+
 		close(out)
 	}()
 

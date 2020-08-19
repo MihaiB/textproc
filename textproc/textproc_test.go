@@ -74,10 +74,9 @@ func TestCatalogueKeys(t *testing.T) {
 
 func TestNorm(t *testing.T) {
 	inOut := map[string]string{
-		"": "",
-		// TODO
-		//" \t":   "",
-		//"a \rb": "a\nb\n",
+		"":      "",
+		" \t":   "",
+		"a \rb": "a\nb\n",
 	}
 	checkCatalogueEntry(t, "norm", inOut)
 }

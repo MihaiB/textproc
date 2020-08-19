@@ -12,7 +12,8 @@ func checkChannel(t *testing.T, runeCh <-chan rune, runes []rune) {
 		if got, ok := <-runeCh; !ok {
 			t.Fatal("Rune channel closed early, expected", want)
 		} else if got != want {
-			t.Fatal("Want", want, "got", got)
+			t.Fatalf("Want %#v got %#v", string([]rune{want}),
+				string([]rune{got}))
 		}
 	}
 
@@ -64,6 +65,9 @@ func TestProcessorTypeMatch(*testing.T) {
 	for range []textproc.Processor{
 		textproc.ConvertLineTerminatorsToLF,
 		textproc.EnsureFinalLFIfNonEmpty,
+		textproc.TrimLFTrailingSpaces,
+		textproc.TrimLeadingEmptyLFLines,
+		textproc.TrimTrailingEmptyLFLines,
 	} {
 	}
 }
@@ -88,4 +92,44 @@ func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
 		"1\n2\n3\n\n": "1\n2\n3\n\n",
 	}
 	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
+}
+
+func TestTrimLFTrailingSpaces(t *testing.T) {
+	inOut := map[string]string{
+		"":                                   "",
+		" @":                                 " @",
+		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": "\nT\n\n sp\n\tmix \tz\n",
+		"no final LF \t":                     "no final LF",
+	}
+	checkProcessor(t, textproc.TrimLFTrailingSpaces, inOut)
+}
+
+func TestTrimLeadingEmptyLFLines(t *testing.T) {
+	inOut := map[string]string{
+		"":              "",
+		"\n":            "",
+		"\n\n\n":        "",
+		"\n\nwy-z":      "wy-z",
+		"ab\nc":         "ab\nc",
+		"\n\nij\n\nk\n": "ij\n\nk\n",
+	}
+	checkProcessor(t, textproc.TrimLeadingEmptyLFLines, inOut)
+}
+
+func TestTrimTrailingEmptyLFLines(t *testing.T) {
+	inOut := map[string]string{
+		"":             "",
+		"\n":           "",
+		"\n\n":         "",
+		"\n\n\n":       "",
+		"\n\n\n\r":     "\n\n\n\r",
+		"\n\n\nwz":     "\n\n\nwz",
+		"a\n\n\n":      "a\n",
+		"\n\na\n\nb":   "\n\na\n\nb",
+		"x\n\ny\n\n":   "x\n\ny\n",
+		"x\n\ny\n":     "x\n\ny\n",
+		"a\n\nb\n\n\n": "a\n\nb\n",
+		"a\n\nbc":      "a\n\nbc",
+	}
+	checkProcessor(t, textproc.TrimTrailingEmptyLFLines, inOut)
 }
