@@ -79,6 +79,7 @@ func TestProcessorTypeMatch(*testing.T) {
 		TrimLeadingEmptyLFLines,
 		TrimTrailingEmptyLFLines,
 		SortLFLinesI,
+		SortLFParagraphsI,
 	} {
 	}
 }
