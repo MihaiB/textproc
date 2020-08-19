@@ -1,12 +1,5 @@
 package main
 
-import (
-	"github.com/MihaiB/textproc"
-	"io"
-	"strings"
-	"testing"
-)
-
 func checkProc(t *testing.T, name string, in textproc.Reader,
 	want []rune, err error) {
 	catEntry, ok := catalogue[name]

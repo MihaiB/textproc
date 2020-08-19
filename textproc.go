@@ -22,8 +22,8 @@ func readRune(reader io.RuneReader) (rune, error) {
 }
 
 // Read returns two channels.
-// All runes read as UTF-8 are sent, then the rune channel is closed,
-// then a single non-nil error is sent, then the error channel is closed.
+// All runes read from r as UTF-8 are sent, then the rune channel is closed,
+// then the error from r is sent, then the error channel is closed.
 func Read(r io.Reader) (<-chan rune, <-chan error) {
 	runeCh := make(chan rune)
 	errCh := make(chan error)

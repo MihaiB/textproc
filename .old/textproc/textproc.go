@@ -3,10 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
-	"github.com/MihaiB/textproc"
-	"io"
-	"os"
 	"sort"
 	"strings"
 )
@@ -98,26 +94,13 @@ processors:
 	return args, nil
 }
 
-func errExit(err error) {
-	if len(os.Args) > 0 && os.Args[0] != "" {
-		fmt.Fprint(os.Stderr, os.Args[0], ": ")
-	}
-	fmt.Fprintln(os.Stderr, "error:", err)
-	os.Exit(1)
-}
-
 func main() {
 	args, err := parseArgs(os.Args)
 	if err != nil {
 		errExit(err)
 	}
 
-	in := textproc.NewReader(os.Stdin)
 	for _, proc := range args.procs {
 		in = proc(in)
-	}
-
-	if _, err = io.Copy(os.Stdout, textproc.NewIoReader(in)); err != nil {
-		errExit(err)
 	}
 }
