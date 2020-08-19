@@ -81,21 +81,22 @@ func ConvertLineTerminatorsToLF(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 
 	go func() {
-		for prev, crt := '\n', '\n'; ; prev = crt {
-			var ok bool
-			if crt, ok = <-in; !ok {
-				break
-			}
+		skipNextLF := false
 
-			if prev == '\r' && crt == '\n' {
+		for r := range in {
+			if skipNextLF && r == '\n' {
+				skipNextLF = false
 				continue
 			}
-			if crt == '\r' {
+			if r == '\r' {
 				out <- '\n'
+				skipNextLF = true
 			} else {
-				out <- crt
+				out <- r
+				skipNextLF = false
 			}
 		}
+
 		close(out)
 	}()
 
@@ -109,11 +110,7 @@ func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
 	go func() {
 		last := '\n'
 
-		for {
-			r, ok := <-in
-			if !ok {
-				break
-			}
+		for r := range in {
 			out <- r
 			last = r
 		}
