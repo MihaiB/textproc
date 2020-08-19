@@ -44,3 +44,57 @@ func Read(r io.Reader) (<-chan rune, <-chan error) {
 
 	return runeCh, errCh
 }
+
+// A Processor processes runes.
+type Processor = func(<-chan rune) <-chan rune
+
+// ConvertLineTerminatorsToLF converts "\r" and "\r\n" to "\n".
+func ConvertLineTerminatorsToLF(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		for prev, crt := '\n', '\n'; ; prev = crt {
+			var ok bool
+			if crt, ok = <-in; !ok {
+				break
+			}
+
+			if prev == '\r' && crt == '\n' {
+				continue
+			}
+			if crt == '\r' {
+				out <- '\n'
+			} else {
+				out <- crt
+			}
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+// EnsureFinalLFIfNonEmpty ensures non-empty content ends with "\n".
+func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
+	out := make(chan rune)
+
+	go func() {
+		last := '\n'
+
+		for {
+			r, ok := <-in
+			if !ok {
+				break
+			}
+			out <- r
+			last = r
+		}
+
+		if last != '\n' {
+			out <- '\n'
+		}
+		close(out)
+	}()
+
+	return out
+}

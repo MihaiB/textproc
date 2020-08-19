@@ -7,18 +7,22 @@ import (
 	"testing"
 )
 
-func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan error, err error) {
-	for _, r := range runes {
+func checkChannel(t *testing.T, runeCh <-chan rune, runes []rune) {
+	for _, want := range runes {
 		if got, ok := <-runeCh; !ok {
-			t.Fatal("Rune channel closed early, expected", r)
-		} else if got != r {
-			t.Fatal("Want", r, "got", got)
+			t.Fatal("Rune channel closed early, expected", want)
+		} else if got != want {
+			t.Fatal("Want", want, "got", got)
 		}
 	}
 
 	if got, ok := <-runeCh; ok {
 		t.Fatal("Unexpected additional rune:", got)
 	}
+}
+
+func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan error, err error) {
+	checkChannel(t, runeCh, runes)
 
 	if got, ok := <-errCh; !ok {
 		t.Fatal("Error channel closed early, expected", err)
@@ -29,6 +33,12 @@ func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan 
 	if got, ok := <-errCh; ok {
 		t.Fatal("Unexpected additional error:", got)
 	}
+}
+
+func checkProcessor(t *testing.T, p textproc.Processor, in, out string) {
+	dry, errCh := textproc.Read(strings.NewReader(in))
+	wet := p(dry)
+	checkChannels(t, wet, []rune(out), errCh, io.EOF)
 }
 
 func TestRead(t *testing.T) {
@@ -44,5 +54,37 @@ func TestRead(t *testing.T) {
 	} {
 		runeCh, errCh := textproc.Read(strings.NewReader(s))
 		checkChannels(t, runeCh, want.runes, errCh, want.err)
+	}
+}
+
+func TestProcessorTypeMatch(*testing.T) {
+	for range []textproc.Processor{
+		textproc.ConvertLineTerminatorsToLF,
+		textproc.EnsureFinalLFIfNonEmpty,
+	} {
+	}
+}
+
+func TestConvertLineTerminatorsToLF(t *testing.T) {
+	for in, out := range map[string]string{
+		"":                  "",
+		"\ra\r\rb\r\nc\n\r": "\na\n\nb\nc\n\n",
+		"•\r\r\n\r≡":        "•\n\n\n≡",
+		"\r\r\r\r\r":        "\n\n\n\n\n",
+	} {
+		checkProcessor(t, textproc.ConvertLineTerminatorsToLF, in, out)
+	}
+}
+
+func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
+	for in, out := range map[string]string{
+		"":            "",
+		"a":           "a\n",
+		"z\n":         "z\n",
+		"\nQ":         "\nQ\n",
+		"One\nTwo\r":  "One\nTwo\r\n",
+		"1\n2\n3\n\n": "1\n2\n3\n\n",
+	} {
+		checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, in, out)
 	}
 }

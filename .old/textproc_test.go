@@ -233,20 +233,6 @@ func TestReadAllTokens(t *testing.T) {
 	}
 }
 
-func TestLFLines(t *testing.T) {
-	for s, want := range map[string]*struct {
-		runes []rune
-		err   error
-	}{
-		"":                  {nil, io.EOF},
-		"\ra\r\rb\r\nc\n\r": {[]rune("\na\n\nb\nc\n\n"), io.EOF},
-		"•\r\r\n\r≡":        {[]rune("•\n\n\n≡"), io.EOF},
-	} {
-		r := textproc.LFLines(textproc.NewReader(strings.NewReader(s)))
-		checkReader(t, r, want.runes, want.err)
-	}
-}
-
 func TestLFLineContent(t *testing.T) {
 	for s, want := range map[string]*struct {
 		tokens [][]rune
@@ -316,25 +302,6 @@ func TestTrimLFTrailingSpace(t *testing.T) {
 		"no final LF \t": {[]rune("no final LF"), io.EOF},
 	} {
 		r := textproc.TrimLFTrailingSpace(textproc.NewReader(
-			strings.NewReader(s)))
-		checkReader(t, r, want.runes, want.err)
-	}
-}
-
-func TestNonEmptyFinalLF(t *testing.T) {
-	for s, want := range map[string]*struct {
-		runes []rune
-		err   error
-	}{
-		"":            {nil, io.EOF},
-		"a":           {[]rune("a\n"), io.EOF},
-		"z\n":         {[]rune("z\n"), io.EOF},
-		"a\xff1":      {[]rune("a"), textproc.ErrInvalidUTF8},
-		"\nQ":         {[]rune("\nQ\n"), io.EOF},
-		"One\nTwo\r":  {[]rune("One\nTwo\r\n"), io.EOF},
-		"1\n2\n3\n\n": {[]rune("1\n2\n3\n\n"), io.EOF},
-	} {
-		r := textproc.NonEmptyFinalLF(textproc.NewReader(
 			strings.NewReader(s)))
 		checkReader(t, r, want.runes, want.err)
 	}
