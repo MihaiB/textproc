@@ -25,27 +25,6 @@ func sortTextsI(texts [][]rune) {
 	}
 }
 
-// EnsureFinalLFIfNonEmpty ensures non-empty content ends with "\n".
-func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
-	out := make(chan rune)
-
-	go func() {
-		last := '\n'
-
-		for r := range in {
-			out <- r
-			last = r
-		}
-
-		if last != '\n' {
-			out <- '\n'
-		}
-		close(out)
-	}()
-
-	return out
-}
-
 // TrimLFTrailingWhiteSpace removes white space at the end of lines.
 // Lines are terminated by "\n".
 func TrimLFTrailingWhiteSpace(in <-chan rune) <-chan rune {

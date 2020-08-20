@@ -89,3 +89,29 @@ func ConvertLineTerminatorsToLF(runeIn <-chan rune, errIn <-chan error) (
 
 	return runeOut, errOut
 }
+
+// EnsureFinalLFIfNonEmpty ensures non-empty content ends with "\n".
+func EnsureFinalLFIfNonEmpty(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	runeOut, errOut := make(chan rune), make(chan error)
+
+	go func() {
+		last := '\n'
+
+		for r := range runeIn {
+			runeOut <- r
+			last = r
+		}
+
+		err := <-errIn
+		if err == nil && last != '\n' {
+			runeOut <- '\n'
+		}
+		close(runeOut)
+
+		errOut <- err
+		close(errOut)
+	}()
+
+	return runeOut, errOut
+}

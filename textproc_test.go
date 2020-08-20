@@ -89,3 +89,16 @@ func TestConvertLineTerminatorsToLF(t *testing.T) {
 	}
 	checkRuneProcessor(t, textproc.ConvertLineTerminatorsToLF, testcases)
 }
+
+func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
+	testcases := runeProcessorTestCases{
+		"":            {"", nil},
+		"a":           {"a\n", nil},
+		"z\n":         {"z\n", nil},
+		"a\xff1":      {"a", textproc.ErrInvalidUTF8},
+		"\nQ":         {"\nQ\n", nil},
+		"One\nTwo\r":  {"One\nTwo\r\n", nil},
+		"1\n2\n3\n\n": {"1\n2\n3\n\n", nil},
+	}
+	checkRuneProcessor(t, textproc.EnsureFinalLFIfNonEmpty, testcases)
+}

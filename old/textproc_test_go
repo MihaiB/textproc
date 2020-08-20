@@ -59,18 +59,6 @@ func TestMatchTokenizerType(*testing.T) {
 	}
 }
 
-func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
-	inOut := map[string]string{
-		"":            "",
-		"a":           "a\n",
-		"z\n":         "z\n",
-		"\nQ":         "\nQ\n",
-		"One\nTwo\r":  "One\nTwo\r\n",
-		"1\n2\n3\n\n": "1\n2\n3\n\n",
-	}
-	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
-}
-
 func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 	inOut := map[string]string{
 		"":                                   "",
