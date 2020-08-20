@@ -4,7 +4,7 @@ For example LF end-of-line, remove trailing white space, sort paragraphs.
 
 Go library and command.
 
-https://pkg.go.dev/github.com/MihaiB/textproc/v2
+https://pkg.go.dev/github.com/MihaiB/textproc/v3
 
 go install ./textproc
 `go env GOPATH`/bin/textproc -help
