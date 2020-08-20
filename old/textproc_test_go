@@ -39,26 +39,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 	}
 }
 
-func TestMatchProcessorType(*testing.T) {
-	for range []textproc.Processor{
-		textproc.EnsureFinalLFIfNonEmpty,
-		textproc.TrimLFTrailingWhiteSpace,
-		textproc.TrimLeadingEmptyLFLines,
-		textproc.TrimTrailingEmptyLFLines,
-		textproc.SortLFLinesI,
-		textproc.SortLFParagraphsI,
-	} {
-	}
-}
-
-func TestMatchTokenizerType(*testing.T) {
-	for range []textproc.Tokenizer{
-		textproc.EmitLFLineContent,
-		textproc.EmitLFParagraphContent,
-	} {
-	}
-}
-
 func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 	inOut := map[string]string{
 		"":                                   "",

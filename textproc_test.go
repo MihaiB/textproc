@@ -67,18 +67,6 @@ func TestReadRunes(t *testing.T) {
 	}
 }
 
-func TestIsRuneProcessor(*testing.T) {
-	for range []textproc.RuneProcessor{
-		textproc.ConvertLineTerminatorsToLF,
-	} {
-	}
-}
-
-func TestIsTokenizer(*testing.T) {
-	for range []textproc.Tokenizer{} {
-	}
-}
-
 func TestConvertLineTerminatorsToLF(t *testing.T) {
 	testcases := runeProcessorTestCases{
 		"":                  {"", nil},
