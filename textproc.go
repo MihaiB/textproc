@@ -59,3 +59,33 @@ func ReadRunes(r io.Reader) (<-chan rune, <-chan error) {
 
 	return runeOut, errOut
 }
+
+// ConvertLineTerminatorsToLF converts "\r" and "\r\n" to "\n".
+func ConvertLineTerminatorsToLF(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	runeOut, errOut := make(chan rune), make(chan error)
+
+	go func() {
+		skipNextLF := false
+
+		for r := range runeIn {
+			if skipNextLF && r == '\n' {
+				skipNextLF = false
+				continue
+			}
+			if r == '\r' {
+				runeOut <- '\n'
+				skipNextLF = true
+			} else {
+				runeOut <- r
+				skipNextLF = false
+			}
+		}
+
+		close(runeOut)
+		errOut <- <-errIn
+		close(errOut)
+	}()
+
+	return runeOut, errOut
+}

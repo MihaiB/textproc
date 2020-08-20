@@ -25,33 +25,6 @@ func sortTextsI(texts [][]rune) {
 	}
 }
 
-// ConvertLineTerminatorsToLF converts "\r" and "\r\n" to "\n".
-func ConvertLineTerminatorsToLF(in <-chan rune) <-chan rune {
-	out := make(chan rune)
-
-	go func() {
-		skipNextLF := false
-
-		for r := range in {
-			if skipNextLF && r == '\n' {
-				skipNextLF = false
-				continue
-			}
-			if r == '\r' {
-				out <- '\n'
-				skipNextLF = true
-			} else {
-				out <- r
-				skipNextLF = false
-			}
-		}
-
-		close(out)
-	}()
-
-	return out
-}
-
 // EnsureFinalLFIfNonEmpty ensures non-empty content ends with "\n".
 func EnsureFinalLFIfNonEmpty(in <-chan rune) <-chan rune {
 	out := make(chan rune)

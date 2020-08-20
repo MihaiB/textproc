@@ -35,6 +35,21 @@ func checkErrChan(t *testing.T, errCh <-chan error, want error) {
 	}
 }
 
+type runeProcessorTestCases = map[string]*struct {
+	str string
+	err error
+}
+
+func checkRuneProcessor(t *testing.T, processor textproc.RuneProcessor,
+	testcases runeProcessorTestCases) {
+	for in, want := range testcases {
+		runeCh, errCh := textproc.ReadRunes(strings.NewReader(in))
+		runeCh, errCh = processor(runeCh, errCh)
+		checkRuneChan(t, runeCh, want.str)
+		checkErrChan(t, errCh, want.err)
+	}
+}
+
 func TestReadRunes(t *testing.T) {
 	for in, want := range map[string]*struct {
 		str string
@@ -50,4 +65,27 @@ func TestReadRunes(t *testing.T) {
 		checkRuneChan(t, runeCh, want.str)
 		checkErrChan(t, errCh, want.err)
 	}
+}
+
+func TestIsRuneProcessor(*testing.T) {
+	for range []textproc.RuneProcessor{
+		textproc.ConvertLineTerminatorsToLF,
+	} {
+	}
+}
+
+func TestIsTokenizer(*testing.T) {
+	for range []textproc.Tokenizer{} {
+	}
+}
+
+func TestConvertLineTerminatorsToLF(t *testing.T) {
+	testcases := runeProcessorTestCases{
+		"":                  {"", nil},
+		"\ra\r\rb\r\nc\n\r": {"\na\n\nb\nc\n\n", nil},
+		"•\r\r\n\r≡":        {"•\n\n\n≡", nil},
+		"\r\r\r\r\r":        {"\n\n\n\n\n", nil},
+		"⏎\r\xaa\r\n":       {"⏎\n", textproc.ErrInvalidUTF8},
+	}
+	checkRuneProcessor(t, textproc.ConvertLineTerminatorsToLF, testcases)
 }

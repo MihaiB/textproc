@@ -41,7 +41,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 
 func TestMatchProcessorType(*testing.T) {
 	for range []textproc.Processor{
-		textproc.ConvertLineTerminatorsToLF,
 		textproc.EnsureFinalLFIfNonEmpty,
 		textproc.TrimLFTrailingWhiteSpace,
 		textproc.TrimLeadingEmptyLFLines,
@@ -58,16 +57,6 @@ func TestMatchTokenizerType(*testing.T) {
 		textproc.EmitLFParagraphContent,
 	} {
 	}
-}
-
-func TestConvertLineTerminatorsToLF(t *testing.T) {
-	inOut := map[string]string{
-		"":                  "",
-		"\ra\r\rb\r\nc\n\r": "\na\n\nb\nc\n\n",
-		"•\r\r\n\r≡":        "•\n\n\n≡",
-		"\r\r\r\r\r":        "\n\n\n\n\n",
-	}
-	checkProcessor(t, textproc.ConvertLineTerminatorsToLF, inOut)
 }
 
 func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
