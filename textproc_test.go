@@ -1,6 +1,7 @@
-package textproc
+package textproc_test
 
 import (
+	"github.com/MihaiB/textproc/v2"
 	"io"
 	"strings"
 	"testing"
@@ -48,22 +49,25 @@ func checkErrorChannel(t *testing.T, errCh <-chan error, err error) {
 	}
 }
 
-func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan error, err error) {
+func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune,
+	errCh <-chan error, err error) {
 	checkChannel(t, runeCh, runes)
 	checkErrorChannel(t, errCh, err)
 }
 
-func checkProcessor(t *testing.T, p Processor, inOut map[string]string) {
+func checkProcessor(t *testing.T, p textproc.Processor,
+	inOut map[string]string) {
 	for in, out := range inOut {
-		dry, errCh := Read(strings.NewReader(in))
+		dry, errCh := textproc.Read(strings.NewReader(in))
 		wet := p(dry)
 		checkChannels(t, wet, []rune(out), errCh, io.EOF)
 	}
 }
 
-func checkTokenizer(t *testing.T, tok Tokenizer, inOut map[string][]string) {
+func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
+	inOut map[string][]string) {
 	for in, out := range inOut {
-		dry, errCh := Read(strings.NewReader(in))
+		dry, errCh := textproc.Read(strings.NewReader(in))
 		wet := tok(dry)
 		checkTokenChannel(t, wet, out)
 		checkErrorChannel(t, errCh, io.EOF)
@@ -76,33 +80,33 @@ func TestRead(t *testing.T) {
 		err   error
 	}{
 		"":            {nil, io.EOF},
-		"\x80a":       {nil, ErrInvalidUTF8},
+		"\x80a":       {nil, textproc.ErrInvalidUTF8},
 		"a•🧐/":        {[]rune("a•🧐/"), io.EOF},
 		"@\uFFFD\t":   {[]rune("@\uFFFD\t"), io.EOF},
-		"=•\xf0\x9f!": {[]rune("=•"), ErrInvalidUTF8},
+		"=•\xf0\x9f!": {[]rune("=•"), textproc.ErrInvalidUTF8},
 	} {
-		runeCh, errCh := Read(strings.NewReader(s))
+		runeCh, errCh := textproc.Read(strings.NewReader(s))
 		checkChannels(t, runeCh, want.runes, errCh, want.err)
 	}
 }
 
 func TestMatchProcessorType(*testing.T) {
-	for range []Processor{
-		ConvertLineTerminatorsToLF,
-		EnsureFinalLFIfNonEmpty,
-		TrimLFTrailingWhiteSpace,
-		TrimLeadingEmptyLFLines,
-		TrimTrailingEmptyLFLines,
-		SortLFLinesI,
-		SortLFParagraphsI,
+	for range []textproc.Processor{
+		textproc.ConvertLineTerminatorsToLF,
+		textproc.EnsureFinalLFIfNonEmpty,
+		textproc.TrimLFTrailingWhiteSpace,
+		textproc.TrimLeadingEmptyLFLines,
+		textproc.TrimTrailingEmptyLFLines,
+		textproc.SortLFLinesI,
+		textproc.SortLFParagraphsI,
 	} {
 	}
 }
 
 func TestMatchTokenizerType(*testing.T) {
-	for range []Tokenizer{
-		EmitLFLineContent,
-		EmitLFParagraphContent,
+	for range []textproc.Tokenizer{
+		textproc.EmitLFLineContent,
+		textproc.EmitLFParagraphContent,
 	} {
 	}
 }
@@ -114,7 +118,7 @@ func TestConvertLineTerminatorsToLF(t *testing.T) {
 		"•\r\r\n\r≡":        "•\n\n\n≡",
 		"\r\r\r\r\r":        "\n\n\n\n\n",
 	}
-	checkProcessor(t, ConvertLineTerminatorsToLF, inOut)
+	checkProcessor(t, textproc.ConvertLineTerminatorsToLF, inOut)
 }
 
 func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
@@ -126,7 +130,7 @@ func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
 		"One\nTwo\r":  "One\nTwo\r\n",
 		"1\n2\n3\n\n": "1\n2\n3\n\n",
 	}
-	checkProcessor(t, EnsureFinalLFIfNonEmpty, inOut)
+	checkProcessor(t, textproc.EnsureFinalLFIfNonEmpty, inOut)
 }
 
 func TestTrimLFTrailingWhiteSpace(t *testing.T) {
@@ -136,7 +140,7 @@ func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": "\nT\n\n sp\n\tmix \tz\n",
 		"no final LF \t":                     "no final LF",
 	}
-	checkProcessor(t, TrimLFTrailingWhiteSpace, inOut)
+	checkProcessor(t, textproc.TrimLFTrailingWhiteSpace, inOut)
 }
 
 func TestTrimLeadingEmptyLFLines(t *testing.T) {
@@ -148,7 +152,7 @@ func TestTrimLeadingEmptyLFLines(t *testing.T) {
 		"ab\nc":         "ab\nc",
 		"\n\nij\n\nk\n": "ij\n\nk\n",
 	}
-	checkProcessor(t, TrimLeadingEmptyLFLines, inOut)
+	checkProcessor(t, textproc.TrimLeadingEmptyLFLines, inOut)
 }
 
 func TestTrimTrailingEmptyLFLines(t *testing.T) {
@@ -166,7 +170,7 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 		"a\n\nb\n\n\n": "a\n\nb\n",
 		"a\n\nbc":      "a\n\nbc",
 	}
-	checkProcessor(t, TrimTrailingEmptyLFLines, inOut)
+	checkProcessor(t, textproc.TrimTrailingEmptyLFLines, inOut)
 }
 
 func TestEmitLFLineContent(t *testing.T) {
@@ -177,7 +181,7 @@ func TestEmitLFLineContent(t *testing.T) {
 		"\n\nz":    {"", "", "z"},
 		"ζ\nξ a":   {"ζ", "ξ a"},
 	}
-	checkTokenizer(t, EmitLFLineContent, inOut)
+	checkTokenizer(t, textproc.EmitLFLineContent, inOut)
 }
 
 func TestSortLFLinesI(t *testing.T) {
@@ -188,7 +192,7 @@ func TestSortLFLinesI(t *testing.T) {
 		"Bb\nbB\nBB\na\n":        "a\nBb\nbB\nBB\n",
 		"bz\n\nA\n\n\nC":         "\n\n\nA\nbz\nC\n",
 	}
-	checkProcessor(t, SortLFLinesI, inOut)
+	checkProcessor(t, textproc.SortLFLinesI, inOut)
 }
 
 func TestEmitLFParagraphContent(t *testing.T) {
@@ -199,7 +203,7 @@ func TestEmitLFParagraphContent(t *testing.T) {
 		"\n\nδσ\n\n\n\nx\ny\n": {"δσ", "x\ny"},
 		"ø\n\nb\nc\n":          {"ø", "b\nc"},
 	}
-	checkTokenizer(t, EmitLFParagraphContent, inOut)
+	checkTokenizer(t, textproc.EmitLFParagraphContent, inOut)
 }
 
 func TestSortLFParagraphsI(t *testing.T) {
@@ -210,5 +214,5 @@ func TestSortLFParagraphsI(t *testing.T) {
 		"Hi\n👽\n\nalien\n\n\nspace": "alien\n\nHi\n👽\n\nspace\n",
 		"NEON\n\nargon\n\nradon\nxenon\n\n\n\nKr\nHe\n\n": "argon\n\nKr\nHe\n\nNEON\n\nradon\nxenon\n",
 	}
-	checkProcessor(t, SortLFParagraphsI, inOut)
+	checkProcessor(t, textproc.SortLFParagraphsI, inOut)
 }
