@@ -50,6 +50,9 @@ func Read(r io.Reader) (<-chan rune, <-chan error) {
 // A Processor processes runes.
 type Processor = func(<-chan rune) <-chan rune
 
+// A Tokenizer emits tokens.
+type Tokenizer = func(<-chan rune) <-chan []rune
+
 type textLowercaseT struct {
 	text      []rune
 	lowercase string
@@ -206,26 +209,31 @@ func TrimTrailingEmptyLFLines(in <-chan rune) <-chan rune {
 	return out
 }
 
-// getLFLineContent returns the content of all lines
-// excluding the line terminator "\n".
-func getLFLineContent(in <-chan rune) [][]rune {
-	var texts [][]rune
-	var crt []rune
+// EmitLFLineContent emits the content of each line
+// (excluding the line terminator "\n") as a token.
+func EmitLFLineContent(in <-chan rune) <-chan []rune {
+	out := make(chan []rune)
 
-	for r := range in {
-		if r == '\n' {
-			texts = append(texts, crt)
-			crt = nil
-			continue
+	go func() {
+		var crt []rune
+
+		for r := range in {
+			if r == '\n' {
+				out <- crt
+				crt = nil
+				continue
+			}
+
+			crt = append(crt, r)
 		}
 
-		crt = append(crt, r)
-	}
+		if len(crt) > 0 {
+			out <- crt
+		}
+		close(out)
+	}()
 
-	if len(crt) > 0 {
-		texts = append(texts, crt)
-	}
-	return texts
+	return out
 }
 
 // SortLFLinesI reads the content of all lines
@@ -236,7 +244,10 @@ func SortLFLinesI(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 
 	go func() {
-		lines := getLFLineContent(in)
+		var lines [][]rune
+		for line := range EmitLFLineContent(in) {
+			lines = append(lines, line)
+		}
 		sortTextsI(lines)
 
 		for _, line := range lines {
@@ -251,35 +262,39 @@ func SortLFLinesI(in <-chan rune) <-chan rune {
 	return out
 }
 
-// getLFParagraphContent returns the content of all paragraphs
-// excluding the line terminator of a paragraph's last line.
+// EmitLFParagraphContent emits the content of each paragraph
+// (excluding the line terminator of the paragraph's last line) as a token.
 //
 // A paragraph consists of adjacent non-empty lines.
 // Lines are terminated by "\n".
-func getLFParagraphContent(in <-chan rune) [][]rune {
-	lines := getLFLineContent(in)
-	var paragraphs [][]rune
-	var par []rune
+func EmitLFParagraphContent(in <-chan rune) <-chan []rune {
+	out := make(chan []rune)
 
-	for _, line := range lines {
-		if len(line) != 0 {
-			if len(par) > 0 {
-				par = append(par, '\n')
+	go func() {
+		var par []rune
+
+		for line := range EmitLFLineContent(in) {
+			if len(line) != 0 {
+				if len(par) > 0 {
+					par = append(par, '\n')
+				}
+				par = append(par, line...)
+				continue
 			}
-			par = append(par, line...)
-			continue
+
+			if len(par) != 0 {
+				out <- par
+				par = nil
+			}
 		}
 
 		if len(par) != 0 {
-			paragraphs = append(paragraphs, par)
-			par = nil
+			out <- par
 		}
-	}
+		close(out)
+	}()
 
-	if len(par) != 0 {
-		paragraphs = append(paragraphs, par)
-	}
-	return paragraphs
+	return out
 }
 
 // SortLFParagraphsI reads the content of all paragraphs
@@ -293,7 +308,10 @@ func SortLFParagraphsI(in <-chan rune) <-chan rune {
 	out := make(chan rune)
 
 	go func() {
-		paragraphs := getLFParagraphContent(in)
+		var paragraphs [][]rune
+		for par := range EmitLFParagraphContent(in) {
+			paragraphs = append(paragraphs, par)
+		}
 		sortTextsI(paragraphs)
 
 		for i, par := range paragraphs {

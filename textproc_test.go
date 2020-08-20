@@ -21,9 +21,22 @@ func checkChannel(t *testing.T, runeCh <-chan rune, runes []rune) {
 	}
 }
 
-func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan error, err error) {
-	checkChannel(t, runeCh, runes)
+func checkTokenChannel(t *testing.T, tokCh <-chan []rune, tokens []string) {
+	for _, want := range tokens {
+		if gotRunes, ok := <-tokCh; !ok {
+			t.Fatalf("Token channel closed early, expected %#v",
+				want)
+		} else if got := string(gotRunes); got != want {
+			t.Fatalf("Want %#v got %#v", want, got)
+		}
+	}
 
+	if gotRunes, ok := <-tokCh; ok {
+		t.Fatalf("Unexpected additional token: %#v", string(gotRunes))
+	}
+}
+
+func checkErrorChannel(t *testing.T, errCh <-chan error, err error) {
 	if got, ok := <-errCh; !ok {
 		t.Fatal("Error channel closed early, expected", err)
 	} else if got != err {
@@ -35,6 +48,11 @@ func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan 
 	}
 }
 
+func checkChannels(t *testing.T, runeCh <-chan rune, runes []rune, errCh <-chan error, err error) {
+	checkChannel(t, runeCh, runes)
+	checkErrorChannel(t, errCh, err)
+}
+
 func checkProcessor(t *testing.T, p Processor, inOut map[string]string) {
 	for in, out := range inOut {
 		dry, errCh := Read(strings.NewReader(in))
@@ -43,15 +61,12 @@ func checkProcessor(t *testing.T, p Processor, inOut map[string]string) {
 	}
 }
 
-func checkTexts(t *testing.T, gots [][]rune, wants []string) {
-	if len(gots) != len(wants) {
-		t.Fatal("Want", len(wants), "got", len(gots))
-	}
-	for i, want := range wants {
-		got := string(gots[i])
-		if got != want {
-			t.Fatalf("Want %#v got %#v", want, got)
-		}
+func checkTokenizer(t *testing.T, tok Tokenizer, inOut map[string][]string) {
+	for in, out := range inOut {
+		dry, errCh := Read(strings.NewReader(in))
+		wet := tok(dry)
+		checkTokenChannel(t, wet, out)
+		checkErrorChannel(t, errCh, io.EOF)
 	}
 }
 
@@ -71,7 +86,7 @@ func TestRead(t *testing.T) {
 	}
 }
 
-func TestProcessorTypeMatch(*testing.T) {
+func TestMatchProcessorType(*testing.T) {
 	for range []Processor{
 		ConvertLineTerminatorsToLF,
 		EnsureFinalLFIfNonEmpty,
@@ -80,6 +95,14 @@ func TestProcessorTypeMatch(*testing.T) {
 		TrimTrailingEmptyLFLines,
 		SortLFLinesI,
 		SortLFParagraphsI,
+	} {
+	}
+}
+
+func TestMatchTokenizerType(*testing.T) {
+	for range []Tokenizer{
+		EmitLFLineContent,
+		EmitLFParagraphContent,
 	} {
 	}
 }
@@ -146,18 +169,15 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 	checkProcessor(t, TrimTrailingEmptyLFLines, inOut)
 }
 
-func TestGetLFLineContent(t *testing.T) {
-	for in, wants := range map[string][]string{
+func TestEmitLFLineContent(t *testing.T) {
+	inOut := map[string][]string{
 		"":         nil,
 		"α":        {"α"},
 		"\r\nβè\n": {"\r", "βè"},
 		"\n\nz":    {"", "", "z"},
 		"ζ\nξ a":   {"ζ", "ξ a"},
-	} {
-		c, _ := Read(strings.NewReader(in))
-		texts := getLFLineContent(c)
-		checkTexts(t, texts, wants)
 	}
+	checkTokenizer(t, EmitLFLineContent, inOut)
 }
 
 func TestSortLFLinesI(t *testing.T) {
@@ -171,18 +191,15 @@ func TestSortLFLinesI(t *testing.T) {
 	checkProcessor(t, SortLFLinesI, inOut)
 }
 
-func TestGetLFParagraphContent(t *testing.T) {
-	for in, wants := range map[string][]string{
+func TestEmitLFParagraphContent(t *testing.T) {
+	inOut := map[string][]string{
 		"":                     nil,
 		"a\r\nb\n \nc\n\nd":    {"a\r\nb\n \nc", "d"},
 		"\n\nδσ\n\n\n":         {"δσ"},
 		"\n\nδσ\n\n\n\nx\ny\n": {"δσ", "x\ny"},
 		"ø\n\nb\nc\n":          {"ø", "b\nc"},
-	} {
-		c, _ := Read(strings.NewReader(in))
-		texts := getLFParagraphContent(c)
-		checkTexts(t, texts, wants)
 	}
+	checkTokenizer(t, EmitLFParagraphContent, inOut)
 }
 
 func TestSortLFParagraphsI(t *testing.T) {
