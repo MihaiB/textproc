@@ -243,23 +243,6 @@ func TestReadAllTokens(t *testing.T) {
 	}
 }
 
-func TestLFLineContent(t *testing.T) {
-	for s, want := range map[string]*struct {
-		tokens [][]rune
-		err    error
-	}{
-		"":          {nil, io.EOF},
-		"α":         {[][]rune{[]rune("α")}, io.EOF},
-		"\r\nβè\n":  {[][]rune{[]rune("\r"), []rune("βè")}, io.EOF},
-		"\n\nz":     {[][]rune{nil, nil, []rune("z")}, io.EOF},
-		"ζ\nξ\xffa": {[][]rune{{'ζ'}}, textproc.ErrInvalidUTF8},
-	} {
-		textprocReader := textproc.NewReader(strings.NewReader(s))
-		r := textproc.LFLineContent(textprocReader)
-		checkTokenReader(t, r, want.tokens, want.err)
-	}
-}
-
 func TestLFParagraphContent(t *testing.T) {
 	for s, want := range map[string]*struct {
 		tokens [][]rune

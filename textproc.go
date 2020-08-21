@@ -207,3 +207,35 @@ func TrimTrailingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
 
 	return runeOut, errOut
 }
+
+// EmitLFLineContent emits the content of each line.
+// The content does not include the line terminator.
+// Lines are terminated by "\n".
+func EmitLFLineContent(runeIn <-chan rune, errIn <-chan error) (
+	<-chan []rune, <-chan error) {
+	tokenOut, errOut := make(chan []rune), make(chan error)
+
+	go func() {
+		var crt []rune
+
+		for r := range runeIn {
+			if r == '\n' {
+				tokenOut <- crt
+				crt = nil
+				continue
+			}
+
+			crt = append(crt, r)
+		}
+
+		err := <-errIn
+		if err == nil && len(crt) > 0 {
+			tokenOut <- crt
+		}
+		close(tokenOut)
+		errOut <- err
+		close(errOut)
+	}()
+
+	return tokenOut, errOut
+}

@@ -39,17 +39,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 	}
 }
 
-func TestEmitLFLineContent(t *testing.T) {
-	inOut := map[string][]string{
-		"":         nil,
-		"α":        {"α"},
-		"\r\nβè\n": {"\r", "βè"},
-		"\n\nz":    {"", "", "z"},
-		"ζ\nξ a":   {"ζ", "ξ a"},
-	}
-	checkTokenizer(t, textproc.EmitLFLineContent, inOut)
-}
-
 func TestSortLFLinesI(t *testing.T) {
 	inOut := map[string]string{
 		"":                       "",

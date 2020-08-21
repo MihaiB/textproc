@@ -25,33 +25,6 @@ func sortTextsI(texts [][]rune) {
 	}
 }
 
-// EmitLFLineContent emits the content of each line
-// (excluding the line terminator "\n") as a token.
-func EmitLFLineContent(in <-chan rune) <-chan []rune {
-	out := make(chan []rune)
-
-	go func() {
-		var crt []rune
-
-		for r := range in {
-			if r == '\n' {
-				out <- crt
-				crt = nil
-				continue
-			}
-
-			crt = append(crt, r)
-		}
-
-		if len(crt) > 0 {
-			out <- crt
-		}
-		close(out)
-	}()
-
-	return out
-}
-
 // SortLFLinesI reads the content of all lines
 // excluding the line terminator "\n",
 // sorts that content in case-insensitive order

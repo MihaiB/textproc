@@ -91,3 +91,14 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 	}
 	internal.CheckRuneProcessor(t, textproc.TrimTrailingEmptyLFLines, testcases)
 }
+
+func TestEmitLFLineContent(t *testing.T) {
+	testcases := internal.TokenizerTestCases{
+		"":          {nil, nil},
+		"α":         {[]string{"α"}, nil},
+		"\r\nβè\n":  {[]string{"\r", "βè"}, nil},
+		"\n\nz":     {[]string{"", "", "z"}, nil},
+		"ζ\nξ\xffa": {[]string{"ζ"}, textproc.ErrInvalidUTF8},
+	}
+	internal.CheckTokenizer(t, textproc.EmitLFLineContent, testcases)
+}
