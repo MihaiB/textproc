@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"sort"
 	"unicode"
 	"unicode/utf8"
 )
@@ -27,6 +28,32 @@ type RuneProcessor = func(runeIn <-chan rune, errIn <-chan error) (
 // A Tokenizer receives runes and sends tokens.
 type Tokenizer = func(runeIn <-chan rune, errIn <-chan error) (
 	tokenOut <-chan []rune, errOut <-chan error)
+
+type tokenLowercaseT struct {
+	token     []rune
+	lowercase string
+}
+
+func getTokenLowercaseT(token []rune) *tokenLowercaseT {
+	lowerRunes := make([]rune, len(token))
+	for i := range token {
+		lowerRunes[i] = unicode.ToLower(token[i])
+	}
+	return &tokenLowercaseT{token, string(lowerRunes)}
+}
+
+func sortTokensI(tokens [][]rune) {
+	lowercaseTokens := make([]*tokenLowercaseT, len(tokens))
+	for i := range tokens {
+		lowercaseTokens[i] = getTokenLowercaseT(tokens[i])
+	}
+	sort.SliceStable(lowercaseTokens, func(i, j int) bool {
+		return lowercaseTokens[i].lowercase < lowercaseTokens[j].lowercase
+	})
+	for i := range lowercaseTokens {
+		tokens[i] = lowercaseTokens[i].token
+	}
+}
 
 func readRune(reader io.RuneReader) (rune, error) {
 	r, size, err := reader.ReadRune()
@@ -238,4 +265,30 @@ func EmitLFLineContent(runeIn <-chan rune, errIn <-chan error) (
 	}()
 
 	return tokenOut, errOut
+}
+
+// SortLFLinesI reads the content of all lines using EmitLFLineContent,
+// sorts the items in case-insensitive order and adds "\n" after each.
+func SortLFLinesI(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	lineIn, errOut := EmitLFLineContent(runeIn, errIn)
+	runeOut := make(chan rune)
+
+	go func() {
+		var lines [][]rune
+		for line := range lineIn {
+			lines = append(lines, line)
+		}
+		sortTokensI(lines)
+
+		for _, line := range lines {
+			for _, char := range line {
+				runeOut <- char
+			}
+			runeOut <- '\n'
+		}
+		close(runeOut)
+	}()
+
+	return runeOut, errOut
 }

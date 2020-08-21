@@ -280,18 +280,3 @@ func TestSortLFParagraphsI(t *testing.T) {
 		checkReader(t, r, want.runes, want.err)
 	}
 }
-
-func TestSortLFLinesI(t *testing.T) {
-	for s, want := range map[string]struct {
-		runes []rune
-		err   error
-	}{
-		"":                       {nil, io.EOF},
-		"Q\n\na\nrrr":            {[]rune("\na\nQ\nrrr\n"), io.EOF},
-		"second\nfirst\nno\xcc.": {[]rune("first\nsecond\n"), textproc.ErrInvalidUTF8},
-		"Bb\nbB\nBB\na\n":        {[]rune("a\nBb\nbB\nBB\n"), io.EOF},
-	} {
-		r := textproc.SortLFLinesI(textproc.NewReader(strings.NewReader(s)))
-		checkReader(t, r, want.runes, want.err)
-	}
-}

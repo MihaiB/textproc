@@ -38,6 +38,8 @@ var catalogue = map[string]*catalogueEntry{
 	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
 		"Ensure non-empty content ends with LF"},
 	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
+	"sortli": {textproc.SortLFLinesI,
+		"Sort lines case-insensitive (LF end of line)"},
 	"trail": {textproc.TrimLFTrailingWhiteSpace,
 		"Remove trailing whitespace (LF end of line)"},
 	"trimlf": {chainRuneProcessors(textproc.TrimLeadingEmptyLFLines,

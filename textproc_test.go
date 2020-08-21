@@ -102,3 +102,14 @@ func TestEmitLFLineContent(t *testing.T) {
 	}
 	internal.CheckTokenizer(t, textproc.EmitLFLineContent, testcases)
 }
+
+func TestSortLFLinesI(t *testing.T) {
+	testcases := internal.RuneProcessorTestCases{
+		"":                       {"", nil},
+		"Q\n\na\nrrr":            {"\na\nQ\nrrr\n", nil},
+		"second\nfirst\nno\xcc.": {"first\nsecond\n", textproc.ErrInvalidUTF8},
+		"Bb\nbB\nBB\na\n":        {"a\nBb\nbB\nBB\n", nil},
+		"bz\n\nA\n\n\nC":         {"\n\n\nA\nbz\nC\n", nil},
+	}
+	internal.CheckRuneProcessor(t, textproc.SortLFLinesI, testcases)
+}

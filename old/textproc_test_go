@@ -39,17 +39,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 	}
 }
 
-func TestSortLFLinesI(t *testing.T) {
-	inOut := map[string]string{
-		"":                       "",
-		"Q\n\na\nrrr":            "\na\nQ\nrrr\n",
-		"second\nfirst\nmiddle.": "first\nmiddle.\nsecond\n",
-		"Bb\nbB\nBB\na\n":        "a\nBb\nbB\nBB\n",
-		"bz\n\nA\n\n\nC":         "\n\n\nA\nbz\nC\n",
-	}
-	checkProcessor(t, textproc.SortLFLinesI, inOut)
-}
-
 func TestEmitLFParagraphContent(t *testing.T) {
 	inOut := map[string][]string{
 		"":                     nil,
