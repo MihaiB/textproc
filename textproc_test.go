@@ -90,3 +90,17 @@ func TestEnsureFinalLFIfNonEmpty(t *testing.T) {
 	}
 	checkRuneProcessor(t, textproc.EnsureFinalLFIfNonEmpty, testcases)
 }
+
+func TestTrimLFTrailingWhiteSpace(t *testing.T) {
+	testcases := runeProcessorTestCases{
+		"":          {"", nil},
+		"\xff3":     {"", textproc.ErrInvalidUTF8},
+		" \r\xff3":  {"", textproc.ErrInvalidUTF8},
+		" @\xff3":   {" @", textproc.ErrInvalidUTF8},
+		" @  \xff3": {" @", textproc.ErrInvalidUTF8},
+		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": {
+			"\nT\n\n sp\n\tmix \tz\n", nil},
+		"no final LF \t": {"no final LF", nil},
+	}
+	checkRuneProcessor(t, textproc.TrimLFTrailingWhiteSpace, testcases)
+}

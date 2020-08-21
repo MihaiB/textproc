@@ -39,16 +39,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 	}
 }
 
-func TestTrimLFTrailingWhiteSpace(t *testing.T) {
-	inOut := map[string]string{
-		"":                                   "",
-		" @":                                 " @",
-		"\nT\t\r\n\n sp  \n\tmix \tz \t\r\n": "\nT\n\n sp\n\tmix \tz\n",
-		"no final LF \t":                     "no final LF",
-	}
-	checkProcessor(t, textproc.TrimLFTrailingWhiteSpace, inOut)
-}
-
 func TestTrimLeadingEmptyLFLines(t *testing.T) {
 	inOut := map[string]string{
 		"":              "",

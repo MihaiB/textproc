@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -110,6 +111,41 @@ func EnsureFinalLFIfNonEmpty(runeIn <-chan rune, errIn <-chan error) (
 		close(runeOut)
 
 		errOut <- err
+		close(errOut)
+	}()
+
+	return runeOut, errOut
+}
+
+// TrimLFTrailingWhiteSpace removes white space at the end of lines.
+// Lines are terminated by "\n".
+func TrimLFTrailingWhiteSpace(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	runeOut, errOut := make(chan rune), make(chan error)
+
+	go func() {
+		var spaces []rune
+		for r := range runeIn {
+			if r == '\n' {
+				spaces = nil
+				runeOut <- r
+				continue
+			}
+
+			if unicode.IsSpace(r) {
+				spaces = append(spaces, r)
+				continue
+			}
+
+			for _, space := range spaces {
+				runeOut <- space
+			}
+			spaces = nil
+			runeOut <- r
+		}
+
+		close(runeOut)
+		errOut <- <-errIn
 		close(errOut)
 	}()
 

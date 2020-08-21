@@ -34,6 +34,8 @@ var catalogue = map[string]*catalogueEntry{
 		"Convert line terminators to LF"},
 	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
 		"Ensure non-empty content ends with LF"},
+	"trail": {textproc.TrimLFTrailingWhiteSpace,
+		"Remove trailing whitespace (LF end of line)"},
 }
 
 var catalogueKeys = func() []string {

@@ -7,8 +7,6 @@ var catalogue = map[string]*catalogueEntry{
 		"Sort lines case-insensitive (LF end of line)"},
 	"sortpi": {textproc.SortLFParagraphsI,
 		"Sort paragraphs case-insensitive (LF end of line)"},
-	"trail": {textproc.TrimLFTrailingWhiteSpace,
-		"Remove trailing whitespace (LF end of line)"},
 	"trimlf": {chainProcessors(textproc.TrimLeadingEmptyLFLines,
 		textproc.TrimTrailingEmptyLFLines),
 		"Trim leading and trailing empty lines (LF end of line)"},
