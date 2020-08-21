@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/MihaiB/textproc/v3"
+	"github.com/MihaiB/textproc/v3/internal"
 	"io"
 	"strings"
 	"testing"
@@ -38,6 +39,15 @@ func TestCatalogueKeys(t *testing.T) {
 				a, "≥", b)
 		}
 	}
+}
+
+func TestNorm(t *testing.T) {
+	testcases := internal.RuneProcessorTestCases{
+		"":      {"", nil},
+		" \t":   {"", nil},
+		"a \rb": {"a\nb\n", nil},
+	}
+	internal.CheckRuneProcessor(t, catalogue["norm"].runeProc, testcases)
 }
 
 func TestParseArgsNoPrgName(t *testing.T) {
