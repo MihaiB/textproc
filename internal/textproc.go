@@ -64,7 +64,8 @@ type RuneProcessorTestCases = map[string]*struct {
 }
 
 // CheckRuneProcessor checks the RuneProcessor on the test cases.
-func CheckRuneProcessor(t *testing.T, processor textproc.RuneProcessor, testcases RuneProcessorTestCases) {
+func CheckRuneProcessor(t *testing.T, processor textproc.RuneProcessor,
+	testcases RuneProcessorTestCases) {
 	for in, want := range testcases {
 		runeCh, errCh := processor(textproc.ReadRunes(strings.NewReader(in)))
 		CheckRuneChannel(t, runeCh, want.String)
@@ -80,7 +81,8 @@ type TokenizerTestCases = map[string]*struct {
 }
 
 // CheckTokenizer checks the Tokenizer on the test cases.
-func CheckTokenizer(t *testing.T, tokenizer textproc.Tokenizer, testcases TokenizerTestCases) {
+func CheckTokenizer(t *testing.T, tokenizer textproc.Tokenizer,
+	testcases TokenizerTestCases) {
 	for in, want := range testcases {
 		tokenCh, errCh := tokenizer(textproc.ReadRunes(strings.NewReader(in)))
 		CheckTokenChannel(t, tokenCh, want.Strings)
