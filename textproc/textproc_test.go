@@ -67,6 +67,28 @@ func TestParseArgsUnknownProcessor(t *testing.T) {
 	}
 }
 
+func TestParseArgsProcs(t *testing.T) {
+	for _, tc := range []*struct {
+		osArgs        []string
+		processorsLen int
+	}{
+		{[]string{"cmd"}, 0},
+		{[]string{"cmd", "lf"}, 1},
+		{[]string{"cmd", "lf", "lf"}, 2},
+		{[]string{"cmd", "lf", "sortpi", "lf"}, 3},
+		{[]string{"cmd", "norm"}, 1},
+	} {
+		args, err := parseArgs(tc.osArgs)
+		if err != nil {
+			t.Fatal("Want", nil, "got", err)
+		}
+		if len(args.runeProcs) != tc.processorsLen {
+			t.Fatal("Want", tc.processorsLen,
+				"got", len(args.runeProcs))
+		}
+	}
+}
+
 func TestWrite(t *testing.T) {
 	for _, tc := range []*struct {
 		str string

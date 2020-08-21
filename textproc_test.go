@@ -113,3 +113,29 @@ func TestSortLFLinesI(t *testing.T) {
 	}
 	internal.CheckRuneProcessor(t, textproc.SortLFLinesI, testcases)
 }
+
+func TestEmitLFParagraphContent(t *testing.T) {
+	testcases := internal.TokenizerTestCases{
+		"":                     {nil, nil},
+		"a\r\nb\n \nc\n\nd":    {[]string{"a\r\nb\n \nc", "d"}, nil},
+		"\n\nδσ\n\n\n":         {[]string{"δσ"}, nil},
+		"\n\nδσ\n\n\n\nx\ny\n": {[]string{"δσ", "x\ny"}, nil},
+		"ø\n\nb\nc\xff":        {[]string{"ø"}, textproc.ErrInvalidUTF8},
+	}
+	internal.CheckTokenizer(t, textproc.EmitLFParagraphContent, testcases)
+}
+
+func TestSortLFParagraphsI(t *testing.T) {
+	testcases := internal.RuneProcessorTestCases{
+		"":                          {"", nil},
+		"\n\n\n":                    {"", nil},
+		"Par1":                      {"Par1\n", nil},
+		"Hi\n👽\n\nalien\n\n\nspace": {"alien\n\nHi\n👽\n\nspace\n", nil},
+		"NEON\n\nargon\n\nradon\nxenon\n\n\n\nKr\nHe\n\n": {
+			"argon\n\nKr\nHe\n\nNEON\n\nradon\nxenon\n", nil},
+		"NEON\n\nargon\n\nradon\nxenon\n\nHg\nHe\xffa": {
+			"argon\n\nNEON\n\nradon\nxenon\n",
+			textproc.ErrInvalidUTF8},
+	}
+	internal.CheckRuneProcessor(t, textproc.SortLFParagraphsI, testcases)
+}

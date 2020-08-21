@@ -40,6 +40,8 @@ var catalogue = map[string]*catalogueEntry{
 	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
 	"sortli": {textproc.SortLFLinesI,
 		"Sort lines case-insensitive (LF end of line)"},
+	"sortpi": {textproc.SortLFParagraphsI,
+		"Sort paragraphs case-insensitive (LF end of line)"},
 	"trail": {textproc.TrimLFTrailingWhiteSpace,
 		"Remove trailing whitespace (LF end of line)"},
 	"trimlf": {chainRuneProcessors(textproc.TrimLeadingEmptyLFLines,

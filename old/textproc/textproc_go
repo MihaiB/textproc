@@ -1,4 +1,0 @@
-var catalogue = map[string]*catalogueEntry{
-	"sortpi": {textproc.SortLFParagraphsI,
-		"Sort paragraphs case-insensitive (LF end of line)"},
-}

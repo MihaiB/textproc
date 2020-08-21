@@ -292,3 +292,75 @@ func SortLFLinesI(runeIn <-chan rune, errIn <-chan error) (
 
 	return runeOut, errOut
 }
+
+// EmitLFParagraphContent emits the content of each paragraph.
+// The content does not include the line terminator
+// of the paragraph's last line.
+//
+// A paragraph consists of adjacent non-empty lines.
+// Lines are terminated by "\n".
+func EmitLFParagraphContent(runeIn <-chan rune, errIn <-chan error) (
+	<-chan []rune, <-chan error) {
+	lineIn, errIn := EmitLFLineContent(runeIn, errIn)
+	tokenOut, errOut := make(chan []rune), make(chan error)
+
+	go func() {
+		var par []rune
+
+		for line := range lineIn {
+			if len(line) != 0 {
+				if len(par) > 0 {
+					par = append(par, '\n')
+				}
+				par = append(par, line...)
+				continue
+			}
+
+			if len(par) != 0 {
+				tokenOut <- par
+				par = nil
+			}
+		}
+
+		err := <-errIn
+		if err == nil && len(par) != 0 {
+			tokenOut <- par
+		}
+		close(tokenOut)
+		errOut <- err
+		close(errOut)
+	}()
+
+	return tokenOut, errOut
+}
+
+// SortLFParagraphsI reads the content of all paragraphs
+// using EmitLFParagraphContent,
+// sorts the items in case-insensitive order, joins them with "\n\n"
+// and adds "\n" after the last one.
+func SortLFParagraphsI(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	parIn, errOut := EmitLFParagraphContent(runeIn, errIn)
+	runeOut := make(chan rune)
+
+	go func() {
+		var paragraphs [][]rune
+		for par := range parIn {
+			paragraphs = append(paragraphs, par)
+		}
+		sortTokensI(paragraphs)
+
+		for i, par := range paragraphs {
+			if i > 0 {
+				runeOut <- '\n'
+			}
+			for _, char := range par {
+				runeOut <- char
+			}
+			runeOut <- '\n'
+		}
+		close(runeOut)
+	}()
+
+	return runeOut, errOut
+}
