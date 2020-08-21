@@ -14,6 +14,14 @@ func TestCatalogueKeys(t *testing.T) {
 
 	unique := map[string]struct{}{}
 	for _, k := range catalogueKeys {
+		if k != strings.ToLower(k) {
+			t.Fatal("Key", k, "is not lowercase.",
+				"Keys should be lowercase",
+				"because they are sorted",
+				"in case-sensitive order",
+				"using sort.Strings(…).")
+		}
+
 		if _, ok := catalogue[k]; !ok {
 			t.Fatal("Key", k, "not in catalogue")
 		}
