@@ -151,3 +151,59 @@ func TrimLFTrailingWhiteSpace(runeIn <-chan rune, errIn <-chan error) (
 
 	return runeOut, errOut
 }
+
+// TrimLeadingEmptyLFLines removes empty lines at the start of the input.
+// Lines are terminated by "\n".
+func TrimLeadingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	runeOut, errOut := make(chan rune), make(chan error)
+
+	go func() {
+		skipping := true
+		for r := range runeIn {
+			if skipping {
+				if r == '\n' {
+					continue
+				}
+				skipping = false
+			}
+			runeOut <- r
+		}
+		close(runeOut)
+		errOut <- <-errIn
+		close(errOut)
+	}()
+
+	return runeOut, errOut
+}
+
+// TrimTrailingEmptyLFLines removes empty lines at the end of the input.
+// Lines are terminated by "\n".
+func TrimTrailingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
+	<-chan rune, <-chan error) {
+	runeOut, errOut := make(chan rune), make(chan error)
+
+	go func() {
+		atLineStart := true
+		pendingNewlines := 0
+
+		for r := range runeIn {
+			if atLineStart && r == '\n' {
+				pendingNewlines++
+				continue
+			}
+
+			for ; pendingNewlines > 0; pendingNewlines-- {
+				runeOut <- '\n'
+			}
+			runeOut <- r
+			atLineStart = r == '\n'
+		}
+
+		close(runeOut)
+		errOut <- <-errIn
+		close(errOut)
+	}()
+
+	return runeOut, errOut
+}

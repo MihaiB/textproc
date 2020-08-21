@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strings"
 )
 
 var errNoProgramName = errors.New("no program name (os.Args empty)")
@@ -29,13 +30,33 @@ func chainRuneProcessors(runeProcs ...textproc.RuneProcessor) textproc.RuneProce
 	}
 }
 
+var normChain = []string{"lf", "trail", "trimlf", "nelf"}
+
 var catalogue = map[string]*catalogueEntry{
 	"lf": {textproc.ConvertLineTerminatorsToLF,
 		"Convert line terminators to LF"},
 	"nelf": {textproc.EnsureFinalLFIfNonEmpty,
 		"Ensure non-empty content ends with LF"},
+	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
 	"trail": {textproc.TrimLFTrailingWhiteSpace,
 		"Remove trailing whitespace (LF end of line)"},
+	"trimlf": {chainRuneProcessors(textproc.TrimLeadingEmptyLFLines,
+		textproc.TrimTrailingEmptyLFLines),
+		"Trim leading and trailing empty lines (LF end of line)"},
+}
+
+func init() {
+	// Avoid initialization loop for catalogue chain processors
+
+	chainCatalogueKeys := func(keys []string) textproc.RuneProcessor {
+		var runeProcs []textproc.RuneProcessor
+		for _, key := range keys {
+			runeProcs = append(runeProcs, catalogue[key].runeProc)
+		}
+		return chainRuneProcessors(runeProcs...)
+	}
+
+	catalogue["norm"].runeProc = chainCatalogueKeys(normChain)
 }
 
 var catalogueKeys = func() []string {

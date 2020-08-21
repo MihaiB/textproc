@@ -1,28 +1,6 @@
-
-var normChain = []string{"lf", "trail", "trimlf", "nelf"}
-
 var catalogue = map[string]*catalogueEntry{
-	"norm": {nil, fmt.Sprint("Normalize: ", strings.Join(normChain, " "))},
 	"sortli": {textproc.SortLFLinesI,
 		"Sort lines case-insensitive (LF end of line)"},
 	"sortpi": {textproc.SortLFParagraphsI,
 		"Sort paragraphs case-insensitive (LF end of line)"},
-	"trimlf": {chainProcessors(textproc.TrimLeadingEmptyLFLines,
-		textproc.TrimTrailingEmptyLFLines),
-		"Trim leading and trailing empty lines (LF end of line)"},
-}
-
-func init() {
-	// Avoid initialization loop for catalogue chain processors
-
-	chainCatalogueKeys := func(keys []string) textproc.Processor {
-		return func(c <-chan rune) <-chan rune {
-			for _, key := range keys {
-				c = catalogue[key].processor(c)
-			}
-			return c
-		}
-	}
-
-	catalogue["norm"].processor = chainCatalogueKeys(normChain)
 }

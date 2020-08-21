@@ -25,56 +25,6 @@ func sortTextsI(texts [][]rune) {
 	}
 }
 
-// TrimLeadingEmptyLFLines removes empty lines at the start of the input.
-// Lines are terminated by "\n".
-func TrimLeadingEmptyLFLines(in <-chan rune) <-chan rune {
-	out := make(chan rune)
-
-	go func() {
-		skipping := true
-		for r := range in {
-			if skipping {
-				if r == '\n' {
-					continue
-				}
-				skipping = false
-			}
-			out <- r
-		}
-		close(out)
-	}()
-
-	return out
-}
-
-// TrimTrailingEmptyLFLines removes empty lines at the end of the input.
-// Lines are terminated by "\n".
-func TrimTrailingEmptyLFLines(in <-chan rune) <-chan rune {
-	out := make(chan rune)
-
-	go func() {
-		atLineStart := true
-		pendingNewlines := 0
-
-		for r := range in {
-			if atLineStart && r == '\n' {
-				pendingNewlines++
-				continue
-			}
-
-			for ; pendingNewlines > 0; pendingNewlines-- {
-				out <- '\n'
-			}
-			out <- r
-			atLineStart = r == '\n'
-		}
-
-		close(out)
-	}()
-
-	return out
-}
-
 // EmitLFLineContent emits the content of each line
 // (excluding the line terminator "\n") as a token.
 func EmitLFLineContent(in <-chan rune) <-chan []rune {

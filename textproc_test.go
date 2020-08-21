@@ -104,3 +104,33 @@ func TestTrimLFTrailingWhiteSpace(t *testing.T) {
 	}
 	checkRuneProcessor(t, textproc.TrimLFTrailingWhiteSpace, testcases)
 }
+
+func TestTrimLeadingEmptyLFLines(t *testing.T) {
+	testcases := runeProcessorTestCases{
+		"":              {"", nil},
+		"\n":            {"", nil},
+		"\n\n\n":        {"", nil},
+		"\n\nwy\x80z":   {"wy", textproc.ErrInvalidUTF8},
+		"ab\nc":         {"ab\nc", nil},
+		"\n\nij\n\nk\n": {"ij\n\nk\n", nil},
+	}
+	checkRuneProcessor(t, textproc.TrimLeadingEmptyLFLines, testcases)
+}
+
+func TestTrimTrailingEmptyLFLines(t *testing.T) {
+	testcases := runeProcessorTestCases{
+		"":                 {"", nil},
+		"\n":               {"", nil},
+		"\n\n":             {"", nil},
+		"\n\n\n":           {"", nil},
+		"\n\n\n\r":         {"\n\n\n\r", nil},
+		"\n\n\nwz":         {"\n\n\nwz", nil},
+		"a\n\n\n":          {"a\n", nil},
+		"\n\na\n\nb":       {"\n\na\n\nb", nil},
+		"x\n\ny\n\n":       {"x\n\ny\n", nil},
+		"x\n\ny\n":         {"x\n\ny\n", nil},
+		"a\n\nb\n\n\n\xcc": {"a\n\nb\n", textproc.ErrInvalidUTF8},
+		"a\n\nbc\xcc":      {"a\n\nbc", textproc.ErrInvalidUTF8},
+	}
+	checkRuneProcessor(t, textproc.TrimTrailingEmptyLFLines, testcases)
+}

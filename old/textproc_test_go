@@ -39,36 +39,6 @@ func checkTokenizer(t *testing.T, tok textproc.Tokenizer,
 	}
 }
 
-func TestTrimLeadingEmptyLFLines(t *testing.T) {
-	inOut := map[string]string{
-		"":              "",
-		"\n":            "",
-		"\n\n\n":        "",
-		"\n\nwy-z":      "wy-z",
-		"ab\nc":         "ab\nc",
-		"\n\nij\n\nk\n": "ij\n\nk\n",
-	}
-	checkProcessor(t, textproc.TrimLeadingEmptyLFLines, inOut)
-}
-
-func TestTrimTrailingEmptyLFLines(t *testing.T) {
-	inOut := map[string]string{
-		"":             "",
-		"\n":           "",
-		"\n\n":         "",
-		"\n\n\n":       "",
-		"\n\n\n\r":     "\n\n\n\r",
-		"\n\n\nwz":     "\n\n\nwz",
-		"a\n\n\n":      "a\n",
-		"\n\na\n\nb":   "\n\na\n\nb",
-		"x\n\ny\n\n":   "x\n\ny\n",
-		"x\n\ny\n":     "x\n\ny\n",
-		"a\n\nb\n\n\n": "a\n\nb\n",
-		"a\n\nbc":      "a\n\nbc",
-	}
-	checkProcessor(t, textproc.TrimTrailingEmptyLFLines, inOut)
-}
-
 func TestEmitLFLineContent(t *testing.T) {
 	inOut := map[string][]string{
 		"":         nil,
