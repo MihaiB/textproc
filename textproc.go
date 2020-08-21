@@ -1,7 +1,7 @@
 // Package textproc provides text processing.
 //
 // On a pair of channels (chan dataType, chan error)
-// first all data is transmitted then the data channel is closed
+// all data is transmitted then the data channel is closed
 // then a single error is transmitted then the error channel is closed.
 // The nil error indicates success.
 // Any non-nil error (including io.EOF) indicates failure.
@@ -22,12 +22,10 @@ var ErrInvalidUTF8 = errors.New("invalid UTF-8")
 const runeErrorSize = len(string(utf8.RuneError))
 
 // A RuneProcessor receives and sends runes.
-type RuneProcessor = func(runeIn <-chan rune, errIn <-chan error) (
-	runeOut <-chan rune, errOut <-chan error)
+type RuneProcessor = func(runeIn <-chan rune, errIn <-chan error) (runeOut <-chan rune, errOut <-chan error)
 
 // A Tokenizer receives runes and sends tokens.
-type Tokenizer = func(runeIn <-chan rune, errIn <-chan error) (
-	tokenOut <-chan []rune, errOut <-chan error)
+type Tokenizer = func(runeIn <-chan rune, errIn <-chan error) (tokenOut <-chan []rune, errOut <-chan error)
 
 type tokenLowercaseT struct {
 	token     []rune
@@ -89,8 +87,7 @@ func ReadRunes(r io.Reader) (<-chan rune, <-chan error) {
 }
 
 // ConvertLineTerminatorsToLF converts "\r" and "\r\n" to "\n".
-func ConvertLineTerminatorsToLF(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func ConvertLineTerminatorsToLF(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	runeOut := make(chan rune)
 
 	go func() {
@@ -117,8 +114,7 @@ func ConvertLineTerminatorsToLF(runeIn <-chan rune, errIn <-chan error) (
 }
 
 // EnsureFinalLFIfNonEmpty ensures non-empty content ends with "\n".
-func EnsureFinalLFIfNonEmpty(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func EnsureFinalLFIfNonEmpty(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	runeOut, errOut := make(chan rune), make(chan error)
 
 	go func() {
@@ -144,8 +140,7 @@ func EnsureFinalLFIfNonEmpty(runeIn <-chan rune, errIn <-chan error) (
 
 // TrimLFTrailingWhiteSpace removes white space at the end of lines.
 // Lines are terminated by "\n".
-func TrimLFTrailingWhiteSpace(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func TrimLFTrailingWhiteSpace(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	runeOut := make(chan rune)
 
 	go func() {
@@ -177,8 +172,7 @@ func TrimLFTrailingWhiteSpace(runeIn <-chan rune, errIn <-chan error) (
 
 // TrimLeadingEmptyLFLines removes empty lines at the start of the input.
 // Lines are terminated by "\n".
-func TrimLeadingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func TrimLeadingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	runeOut := make(chan rune)
 
 	go func() {
@@ -200,8 +194,7 @@ func TrimLeadingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
 
 // TrimTrailingEmptyLFLines removes empty lines at the end of the input.
 // Lines are terminated by "\n".
-func TrimTrailingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func TrimTrailingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	runeOut := make(chan rune)
 
 	go func() {
@@ -230,8 +223,7 @@ func TrimTrailingEmptyLFLines(runeIn <-chan rune, errIn <-chan error) (
 // EmitLFLineContent emits the content of each line.
 // The content does not include the line terminator.
 // Lines are terminated by "\n".
-func EmitLFLineContent(runeIn <-chan rune, errIn <-chan error) (
-	<-chan []rune, <-chan error) {
+func EmitLFLineContent(runeIn <-chan rune, errIn <-chan error) (<-chan []rune, <-chan error) {
 	tokenOut, errOut := make(chan []rune), make(chan error)
 
 	go func() {
@@ -261,8 +253,7 @@ func EmitLFLineContent(runeIn <-chan rune, errIn <-chan error) (
 
 // SortLFLinesI reads the content of all lines using EmitLFLineContent,
 // sorts the items in case-insensitive order and adds "\n" after each.
-func SortLFLinesI(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func SortLFLinesI(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	lineIn, errIn := EmitLFLineContent(runeIn, errIn)
 	runeOut := make(chan rune)
 
@@ -291,8 +282,7 @@ func SortLFLinesI(runeIn <-chan rune, errIn <-chan error) (
 //
 // A paragraph consists of adjacent non-empty lines.
 // Lines are terminated by "\n".
-func EmitLFParagraphContent(runeIn <-chan rune, errIn <-chan error) (
-	<-chan []rune, <-chan error) {
+func EmitLFParagraphContent(runeIn <-chan rune, errIn <-chan error) (<-chan []rune, <-chan error) {
 	lineIn, errIn := EmitLFLineContent(runeIn, errIn)
 	tokenOut, errOut := make(chan []rune), make(chan error)
 
@@ -330,8 +320,7 @@ func EmitLFParagraphContent(runeIn <-chan rune, errIn <-chan error) (
 // using EmitLFParagraphContent,
 // sorts the items in case-insensitive order, joins them with "\n\n"
 // and adds "\n" after the last one.
-func SortLFParagraphsI(runeIn <-chan rune, errIn <-chan error) (
-	<-chan rune, <-chan error) {
+func SortLFParagraphsI(runeIn <-chan rune, errIn <-chan error) (<-chan rune, <-chan error) {
 	parIn, errIn := EmitLFParagraphContent(runeIn, errIn)
 	runeOut := make(chan rune)
 
