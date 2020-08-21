@@ -3,8 +3,8 @@
 // On a pair of channels (chan dataType, chan error)
 // all data is transmitted then the data channel is closed
 // then a single error is transmitted then the error channel is closed.
-// The nil error indicates success.
-// Any non-nil error (including io.EOF) indicates failure.
+// The nil error represents success.
+// Any non-nil error (including io.EOF) represents failure.
 //
 // Motivation
 //
