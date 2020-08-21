@@ -92,7 +92,7 @@ func TestTrimTrailingEmptyLFLines(t *testing.T) {
 	internal.CheckRuneProcessor(t, textproc.TrimTrailingEmptyLFLines, testcases)
 }
 
-func TestEmitLFLineContent(t *testing.T) {
+func TestReadLFLineContent(t *testing.T) {
 	testcases := internal.TokenizerTestCases{
 		"":          {nil, nil},
 		"α":         {[]string{"α"}, nil},
@@ -100,7 +100,7 @@ func TestEmitLFLineContent(t *testing.T) {
 		"\n\nz":     {[]string{"", "", "z"}, nil},
 		"ζ\nξ\xffa": {[]string{"ζ"}, textproc.ErrInvalidUTF8},
 	}
-	internal.CheckTokenizer(t, textproc.EmitLFLineContent, testcases)
+	internal.CheckTokenizer(t, textproc.ReadLFLineContent, testcases)
 }
 
 func TestSortLFLinesI(t *testing.T) {
@@ -114,7 +114,7 @@ func TestSortLFLinesI(t *testing.T) {
 	internal.CheckRuneProcessor(t, textproc.SortLFLinesI, testcases)
 }
 
-func TestEmitLFParagraphContent(t *testing.T) {
+func TestReadLFParagraphContent(t *testing.T) {
 	testcases := internal.TokenizerTestCases{
 		"":                     {nil, nil},
 		"a\r\nb\n \nc\n\nd":    {[]string{"a\r\nb\n \nc", "d"}, nil},
@@ -122,7 +122,7 @@ func TestEmitLFParagraphContent(t *testing.T) {
 		"\n\nδσ\n\n\n\nx\ny\n": {[]string{"δσ", "x\ny"}, nil},
 		"ø\n\nb\nc\xff":        {[]string{"ø"}, textproc.ErrInvalidUTF8},
 	}
-	internal.CheckTokenizer(t, textproc.EmitLFParagraphContent, testcases)
+	internal.CheckTokenizer(t, textproc.ReadLFParagraphContent, testcases)
 }
 
 func TestSortLFParagraphsI(t *testing.T) {
