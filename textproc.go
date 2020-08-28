@@ -31,7 +31,7 @@
 // for example a single rune or the length of a buffer provided by the caller.
 // Such filters have to maintain internal state between calls,
 // but would be simpler to implement and check for correctness
-// if they determined the structure of their own execution.
+// if they organized their own execution.
 // This led to using channels for transmitting data.
 package textproc
 
