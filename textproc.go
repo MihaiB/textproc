@@ -5,34 +5,6 @@
 // then a single error is transmitted then the error channel is closed.
 // The nil error represents success.
 // Any non-nil error (including io.EOF) represents failure.
-//
-// Motivation
-//
-// Transform a stream of text using filters which can be chained.
-// Go library (this package) and command line program (subdirectory textproc).
-//
-// Using io.Reader as the filter interface would require every filter
-// to align and decode UTF-8 bytes
-// and appropriately handle the error (nil, io.EOF or other)
-// and the corresponding n ≥ 0 bytes read.
-// This is in addition to the filter's own task.
-// io.RuneReader solves the alignment, decoding, and amount of data read,
-// but the caller still has to perform an additional check for invalid UTF-8.
-//
-// Package textproc makes the filter interfaces and implementations
-// simpler and easier to check for correctness at the expense of performance.
-// It decodes UTF-8 once, then the filters read runes until they reach the end
-// or encounter an error.
-//
-// Some filters need to read ahead arbitrarily far,
-// for example to discard whitespace only if it is at the end of a line,
-// but the interface design
-// may only allow returning a limited amount of data from each call,
-// for example a single rune or the length of a buffer provided by the caller.
-// Such filters have to maintain internal state between calls,
-// but would be simpler to implement and check for correctness
-// if they organized their own execution.
-// This led to using channels for transmitting data.
 package textproc
 
 import (
