@@ -2,6 +2,9 @@ jobs:
   job:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/github-script@v3
+        with:
+          script: github.request('PUT /repos/${{github.repository}}/actions/workflows/workflow.yml/enable')
       - uses: actions/checkout@v2
       - name: step
         run: .github/workflows/workflow.sh
