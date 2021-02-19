@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"github.com/MihaiB/textproc/v3"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -76,7 +75,7 @@ func BenchmarkInternalGenerateText(b *testing.B) {
 type fileProcFunc = func(inFileName, outFileName string) error
 
 func testPassthroughFileProcFunc(t *testing.T, fn fileProcFunc) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +87,7 @@ func testPassthroughFileProcFunc(t *testing.T, fn fileProcFunc) {
 
 	inFileName := filepath.Join(dir, "in")
 	outFileName := filepath.Join(dir, "out")
-	err = ioutil.WriteFile(inFileName, []byte(benchmarkText), 0644)
+	err = os.WriteFile(inFileName, []byte(benchmarkText), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +95,7 @@ func testPassthroughFileProcFunc(t *testing.T, fn fileProcFunc) {
 	if err = fn(inFileName, outFileName); err != nil {
 		t.Fatal(err)
 	}
-	outBytes, err := ioutil.ReadFile(outFileName)
+	outBytes, err := os.ReadFile(outFileName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +106,7 @@ func testPassthroughFileProcFunc(t *testing.T, fn fileProcFunc) {
 }
 
 func benchmarkFileProcFunc(b *testing.B, fn fileProcFunc) {
-	dir, err := ioutil.TempDir("", "")
+	dir, err := os.MkdirTemp("", "")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -119,7 +118,7 @@ func benchmarkFileProcFunc(b *testing.B, fn fileProcFunc) {
 
 	inFileName := filepath.Join(dir, "in")
 	outFileName := filepath.Join(dir, "out")
-	err = ioutil.WriteFile(inFileName, []byte(benchmarkText), 0644)
+	err = os.WriteFile(inFileName, []byte(benchmarkText), 0644)
 	if err != nil {
 		b.Fatal(err)
 	}
