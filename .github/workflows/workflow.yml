@@ -7,7 +7,7 @@ jobs:
           script: github.request('PUT /repos/${{github.repository}}/actions/workflows/workflow.yml/enable')
       - uses: actions/checkout@v2
       - name: step
-        run: .github/workflows/workflow.sh
+        run: docker build --pull --force-rm .
 
 name: workflow
 
